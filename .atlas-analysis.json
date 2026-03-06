@@ -1,0 +1,135 @@
+{
+  "projectType": "saas",
+  "projectName": "GBI Logistics",
+  "projectDescription": "Intelligent logistics management system for efficient dispatch and reception of shipment guides through transport cubes.",
+  "theme": "linden",
+  "primaryColor": "#1976D2",
+  "lightColor": "#42A5F5",
+  "darkColor": "#0D47A1",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/transport-cubes",
+              "features/guide-management",
+              "features/state-workflow",
+              "features/authentication"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "workflows/customs-dispatch",
+              "workflows/warehouse-transit",
+              "workflows/warehouse-reception",
+              "workflows/client-dispatch"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/dashboard",
+              "guide/creating-cubes",
+              "guide/managing-guides",
+              "guide/validation-scanning"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/overview",
+              "development/project-structure",
+              "development/state-management",
+              "development/design-patterns"
+            ]
+          },
+          {
+            "group": "API Reference",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/transport-cubes",
+              "api/guides",
+              "api/dashboard"
+            ]
+          },
+          {
+            "group": "Models & Types",
+            "pages": [
+              "models/transport-cube",
+              "models/guide",
+              "models/cube-states",
+              "models/cube-types"
+            ]
+          },
+          {
+            "group": "Services",
+            "pages": [
+              "services/http-service",
+              "services/auth-service",
+              "services/transport-cube-service",
+              "services/guide-service"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Additional Resources",
+            "pages": [
+              "resources/configuration",
+              "resources/troubleshooting",
+              "resources/faq",
+              "resources/contributing"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Transport cube lifecycle management with 4-stage workflow (Created, Sent, Downloading, Downloaded)",
+    "Real-time guide tracking and validation with barcode scanning",
+    "Multi-stage logistics workflows (customs dispatch, warehouse transit, reception, client dispatch)",
+    "Secure authentication with token refresh and session management",
+    "State-based filtering and batch operations for transport cubes",
+    "Provider-based state management using Flutter Provider pattern",
+    "RESTful API integration with comprehensive error handling",
+    "Guide status validation by process type"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1.0/Auth/login",
+    "POST /api/v1.0/Auth/refresh-token",
+    "GET /api/v1.0/Dashboard/dashboard",
+    "POST /api/v1.0/Guide/new-transport-cube",
+    "GET /api/v1.0/Guide/get-transport-cubes",
+    "GET /api/v1.0/Guide/get-transport-cube-details",
+    "POST /api/v1.0/Guide/change-transport-cube-state",
+    "POST /api/v1.0/Guide/change-cube-guide",
+    "POST /api/v1.0/Guide/dispatch-cube-to-client",
+    "POST /api/v1.0/Guide/update-status",
+    "GET /api/v1.0/Guide/guides-paginated",
+    "POST /api/v1.0/Guide/validate-guide-status-by-process",
+    "POST /api/v1.0/TransportCube/close",
+    "GET /api/v1.0/Client/to-dispatch-paginated"
+  ]
+}
