@@ -90,7 +90,7 @@ void _restoreSession() {}
 
 ### File Organization
 
-```
+```text
 lib/
 ├── core/                    # Core functionality
 │   ├── config/             # Configuration files
@@ -189,7 +189,7 @@ Write clear, descriptive commit messages:
 
 ### Format
 
-```
+```text
 <type>: <subject>
 
 <body>
@@ -495,7 +495,7 @@ flutter test --coverage
 
 ### API Service Pattern
 
-```dart
+```
 class MyService {
   final HttpService _http;
   
@@ -513,7 +513,7 @@ class MyService {
 
 ### Provider Pattern
 
-```dart
+```
 class MyProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _error;
@@ -540,7 +540,7 @@ class MyProvider extends ChangeNotifier {
 
 ### Message Display Pattern
 
-```dart
+```
 // Show API response message
 MessageHelper.showFromResponse(context, response);
 

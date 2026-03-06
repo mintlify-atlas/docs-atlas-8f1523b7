@@ -9,7 +9,7 @@ The `HttpService` class provides the foundation for all API communication in GBI
 
 ## Class Definition
 
-```dart
+```
 class HttpService {
   final String baseUrl;
   String? _token;
@@ -35,13 +35,13 @@ class HttpService {
 
 Sets or clears the authentication token.
 
-```dart
+```
 void setToken(String? token)
 ```
 
 **Usage:**
 
-```dart
+```
 // Set token
 httpService.setToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
 
@@ -58,7 +58,7 @@ httpService.setToken(null);
 
 #### GET Request
 
-```dart
+```
 Future<ApiResponse<T>> get<T>(
   String path,
   T Function(Map<String, dynamic> json) fromJson, {
@@ -69,7 +69,7 @@ Future<ApiResponse<T>> get<T>(
 
 **Example:**
 
-```dart
+```
 final response = await httpService.get<TransportCubeDetails>(
   '/api/v1.0/Guide/get-transport-cube-details',
   (json) => TransportCubeDetails.fromJson(json['content']),
@@ -87,7 +87,7 @@ if (response.isSuccessful) {
 
 #### POST Request
 
-```dart
+```
 Future<ApiResponse<T>> post<T>(
   String path,
   dynamic data,
@@ -98,7 +98,7 @@ Future<ApiResponse<T>> post<T>(
 
 **Example:**
 
-```dart
+```
 final request = LoginRequest(
   username: 'operator@example.com',
   password: 'securePassword',
@@ -117,7 +117,7 @@ if (response.isSuccessful && response.content?.token != null) {
 
 #### PUT Request
 
-```dart
+```
 Future<ApiResponse<T>> put<T>(
   String path,
   dynamic data,
@@ -128,7 +128,7 @@ Future<ApiResponse<T>> put<T>(
 
 **Example:**
 
-```dart
+```
 final request = ChangeTranportCubesStateRequest(
   transportCubeIds: [123, 456],
   newState: 'Sent',
@@ -151,7 +151,7 @@ if (response.isSuccessful) {
 
 When a 401 response is received, `HttpService` automatically attempts to refresh the token:
 
-```dart
+```
 // Set the refresh callback
 httpService.tokenRefreshCallback = () async {
   return await authService.refreshTokenIfNeeded();
@@ -166,7 +166,7 @@ httpService.tokenRefreshCallback = () async {
 
 ### Session Expiration
 
-```dart
+```
 httpService.onSessionExpired = () {
   // Clear user data
   // Navigate to login screen
@@ -188,7 +188,7 @@ The service automatically handles various error scenarios:
 
 ### API Error Codes
 
-```dart
+```
 if (code == ApiErrorCode.sessionExpired || 
     code == ApiErrorCode.invalidToken) {
   // Trigger session expired handler
@@ -197,7 +197,7 @@ if (code == ApiErrorCode.sessionExpired ||
 
 ### Network Errors
 
-```dart
+```
 try {
   final response = await client.get(uri, headers: headers)
     .timeout(const Duration(seconds: 30));
@@ -216,7 +216,7 @@ try {
 
 All requests include:
 
-```dart
+```
 Map<String, String> get _headers => {
   'Content-Type': 'application/json',
   'Accept': 'application/json',
@@ -229,7 +229,7 @@ Map<String, String> get _headers => {
 
 Automatically checks response headers for version updates:
 
-```dart
+```
 httpService.versionCheckCallback = (versionResponse) {
   if (versionResponse.updateRequired) {
     // Show force update dialog
@@ -245,7 +245,7 @@ httpService.versionCheckCallback = (versionResponse) {
 
 Requests and responses are automatically logged:
 
-```dart
+```
 AppLogger.apiCall(uri.toString(), method: 'GET');
 AppLogger.apiResponse(
   uri.toString(),
@@ -260,7 +260,7 @@ AppLogger.apiResponse(
 
 ### Setup Example
 
-```dart
+```
 final httpService = HttpService(
   baseUrl: 'https://api.gbilogistics.com',
   onSessionExpired: () {

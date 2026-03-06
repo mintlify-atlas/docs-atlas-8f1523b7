@@ -209,7 +209,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
 ### Flutter/Dart Example
 
-```dart
+```
 import 'package:gbi_logistics/core/config/api_config.dart';
 import 'package:gbi_logistics/features/logistics/models/auth_models.dart';
 import 'package:gbi_logistics/features/logistics/services/auth_service.dart';
@@ -244,7 +244,7 @@ if (response.isSuccessful && response.content?.token != null) {
 
 The `AuthService` implements automatic token refresh:
 
-```dart
+```
 // Check if token needs refresh
 final needsRefresh = await authService.refreshTokenIfNeeded();
 
@@ -260,7 +260,7 @@ if (needsRefresh) {
 
 You can validate a token by checking if it's still valid:
 
-```dart
+```
 final isValid = await authService.hasValidToken();
 
 if (!isValid) {
@@ -276,7 +276,7 @@ This makes a test request to the dashboard endpoint to verify the token.
 
 The app can restore a previous session if the user didn't explicitly log out:
 
-```dart
+```
 final loginData = await authService.restoreSession();
 
 if (loginData != null) {
@@ -291,7 +291,7 @@ if (loginData != null) {
 
 To end a session:
 
-```dart
+```
 await authService.logout();
 // Token is cleared from storage
 // User is redirected to login screen

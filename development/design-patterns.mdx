@@ -21,7 +21,7 @@ The Repository Pattern abstracts data access logic and provides a clean API for 
 
 The `HttpService` provides a generic interface for all HTTP operations:
 
-```dart
+```
 class HttpService {
   final String baseUrl;
   String? _token;
@@ -69,7 +69,7 @@ class HttpService {
 
 **Location**: `lib/features/logistics/services/guide_service.dart`
 
-```dart
+```
 class GuideService {
   final HttpService _http;
   
@@ -129,7 +129,7 @@ class GuideService {
 
 **Location**: `lib/features/logistics/services/auth_service.dart`
 
-```dart
+```
 class AuthService {
   final HttpService _http;
   final StorageService _storage;
@@ -204,7 +204,7 @@ The Provider Pattern manages application state and provides reactive updates to 
 
 **Location**: `lib/features/logistics/providers/auth_provider.dart`
 
-```dart
+```
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   final SecureCredentialsService _secureStorage;
@@ -280,7 +280,7 @@ class AuthProvider extends ChangeNotifier {
 
 ### Usage in Widgets
 
-```dart
+```
 class LoginScreen extends StatefulWidget {
   @override
   Widget build(BuildContext context) {
@@ -323,7 +323,7 @@ The Observer Pattern allows objects to be notified of changes in other objects. 
 
 **Location**: `lib/core/observers/auth_lifecycle_observer.dart`
 
-```dart
+```
 class AuthLifecycleObserver with WidgetsBindingObserver {
   final BuildContext Function() getContext;
   bool _disposed = false;
@@ -365,7 +365,7 @@ class AuthLifecycleObserver with WidgetsBindingObserver {
 
 ### Registration in main.dart
 
-```dart
+```
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   AuthLifecycleObserver? _authObserver;
   
@@ -421,7 +421,7 @@ The Factory Pattern creates objects without specifying their exact class. In GBI
 
 **Location**: `lib/features/logistics/models/guide.dart`
 
-```dart
+```
 @immutable
 class Guide {
   final String packageCode;
@@ -465,7 +465,7 @@ class Guide {
 
 **Location**: `lib/features/logistics/models/auth_models.dart`
 
-```dart
+```
 class LoginResponse {
   final String? token;
   final DateTime? expiresAt;
@@ -536,7 +536,7 @@ Ensures a class has only one instance and provides global access to it.
 
 **Location**: `lib/core/services/version_service.dart`
 
-```dart
+```
 class VersionService {
   // Private constructor
   VersionService._();
@@ -565,7 +565,7 @@ class VersionService {
 
 **Usage:**
 
-```dart
+```
 // Access anywhere in the app
 final headers = VersionService.instance.versionHeaders;
 ```
@@ -586,7 +586,7 @@ Defines a family of algorithms and makes them interchangeable.
 
 **Location**: `lib/core/models/api_error.dart`
 
-```dart
+```
 class ApiErrorCode {
   static const int success = 0;
   static const int generalError = 1;
@@ -642,7 +642,7 @@ Provides dependencies to objects rather than having them create dependencies the
 
 ### Implementation in main.dart
 
-```dart
+```
 class _MyAppState extends State<MyApp> {
   late final StorageService storageService;
   late final HttpService httpService;

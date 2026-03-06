@@ -52,7 +52,7 @@ lib/
 
 The application uses Provider for dependency injection and state management:
 
-```dart
+```
 MultiProvider(
   providers: [
     ChangeNotifierProvider<AuthProvider>(
@@ -86,7 +86,7 @@ Business logic is encapsulated in service classes that communicate with the API:
 
 A generic `ApiResponse<T>` wrapper handles all API responses consistently:
 
-```dart
+```
 class ApiResponse<T> {
   final bool isSuccessful;
   final String? message;
@@ -101,7 +101,7 @@ class ApiResponse<T> {
 
 The `AuthLifecycleObserver` monitors app lifecycle events and refreshes authentication:
 
-```dart
+```
 class AuthLifecycleObserver with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
@@ -176,7 +176,7 @@ flutter run
 
 The app supports development and production environments:
 
-```dart
+```
 class ApiConfig {
   static const bool isDevelopment = true;
   static const String devBaseUrl = 'http://100.104.120.121:81';
@@ -239,7 +239,7 @@ version: 1.0.0+8  # Format: version+buildNumber (displays as 1.0.0.8)
 
 The app captures unhandled errors at the root level:
 
-```dart
+```
 FlutterError.onError = (FlutterErrorDetails details) {
   FlutterError.presentError(details);
   debugPrint('FlutterError: ${details.toString()}');

@@ -9,7 +9,7 @@ The `TransportCubeService` class provides methods for managing transport cubes, 
 
 ## Class Definition
 
-```dart
+```
 class TransportCubeService {
   final HttpService _http;
 
@@ -23,7 +23,7 @@ class TransportCubeService {
 
 Creates a new transport cube with specified guides.
 
-```dart
+```
 Future<ApiResponse<NewTransportCubeResponseGenericResponse>> createTransportCube(
   NewTransportCubeRequest request
 )
@@ -31,7 +31,7 @@ Future<ApiResponse<NewTransportCubeResponseGenericResponse>> createTransportCube
 
 **Example:**
 
-```dart
+```
 final request = NewTransportCubeRequest(
   guides: ['PKG001', 'PKG002', 'PKG003'],
   type: CubeType.transitToWarehouse,
@@ -57,7 +57,7 @@ if (response.isSuccessful && response.content?.content != null) {
 
 Retrieves a paginated list of transport cubes filtered by state.
 
-```dart
+```
 Future<ApiResponse<GetTransportCubesPaginatedResponse>> getTransportCubes({
   required int page,
   required int itemsPerPage,
@@ -67,7 +67,7 @@ Future<ApiResponse<GetTransportCubesPaginatedResponse>> getTransportCubes({
 
 **Example:**
 
-```dart
+```
 final response = await transportCubeService.getTransportCubes(
   page: 1,
   itemsPerPage: 20,
@@ -93,7 +93,7 @@ if (response.isSuccessful && response.content?.content != null) {
 
 Retrieves complete details of a specific cube including all guides.
 
-```dart
+```
 Future<ApiResponse<TransportCubeDetails>> getTransportCubeDetails(
   int cubeId, {
   bool suppressAuthHandling = false,
@@ -102,7 +102,7 @@ Future<ApiResponse<TransportCubeDetails>> getTransportCubeDetails(
 
 **Example:**
 
-```dart
+```
 final response = await transportCubeService.getTransportCubeDetails(123);
 
 if (response.isSuccessful && response.content != null) {
@@ -128,7 +128,7 @@ if (response.isSuccessful && response.content != null) {
 
 Changes the state of one or more transport cubes.
 
-```dart
+```
 Future<ApiResponse<void>> changeTransportCubesState(
   ChangeTranportCubesStateRequest request,
 )
@@ -136,7 +136,7 @@ Future<ApiResponse<void>> changeTransportCubesState(
 
 **Example:**
 
-```dart
+```
 final request = ChangeTranportCubesStateRequest(
   transportCubeIds: [123, 456, 789],
   newState: TransportCubeState.sent,
@@ -160,7 +160,7 @@ if (response.isSuccessful) {
 
 Closes one or more transport cubes.
 
-```dart
+```
 Future<ApiResponse<GenericOperationResponseGenericResponse>> closeTransportCubes(
   List<int> cubeIds
 )
@@ -168,7 +168,7 @@ Future<ApiResponse<GenericOperationResponseGenericResponse>> closeTransportCubes
 
 **Example:**
 
-```dart
+```
 final response = await transportCubeService.closeTransportCubes([123, 456]);
 
 if (response.isSuccessful) {
@@ -189,7 +189,7 @@ if (response.isSuccessful) {
 
 Dispatches one or more cubes to a client.
 
-```dart
+```
 Future<ApiResponse<GenericOperationResponseGenericResponse>> dispatchCubeToClient(
   List<int> cubeIds
 )
@@ -197,7 +197,7 @@ Future<ApiResponse<GenericOperationResponseGenericResponse>> dispatchCubeToClien
 
 **Example:**
 
-```dart
+```
 final response = await transportCubeService.dispatchCubeToClient([123]);
 
 if (response.isSuccessful) {
@@ -211,7 +211,7 @@ if (response.isSuccessful) {
 
 Moves a guide from one cube to another.
 
-```dart
+```
 Future<ApiResponse<void>> moveGuideBetweenCubes(
   ChangeCubeGuideRequest request,
 )
@@ -219,7 +219,7 @@ Future<ApiResponse<void>> moveGuideBetweenCubes(
 
 **Example:**
 
-```dart
+```
 final request = ChangeCubeGuideRequest(
   guideCode: 'PKG001',
   fromCubeId: 123,
@@ -237,13 +237,13 @@ if (response.isSuccessful) {
 
 Retrieves the history of state changes for a cube.
 
-```dart
+```
 Future<ApiResponse<List<String>>> getCubeHistory(int cubeId)
 ```
 
 **Example:**
 
-```dart
+```
 final response = await transportCubeService.getCubeHistory(123);
 
 if (response.isSuccessful && response.content != null) {
@@ -258,7 +258,7 @@ if (response.isSuccessful && response.content != null) {
 
 Verifies a scanned cube or guide barcode.
 
-```dart
+```
 Future<ApiResponse<void>> verifyTransportCubeScan(
   TransportCubeScanRequest request
 )
@@ -266,7 +266,7 @@ Future<ApiResponse<void>> verifyTransportCubeScan(
 
 **Example:**
 
-```dart
+```
 final request = TransportCubeScanRequest(
   cubeId: 123,
   scannedCode: 'CUBE-123-456',
@@ -283,7 +283,7 @@ if (response.isSuccessful) {
 
 ## Complete Usage Example
 
-```dart
+```
 class CubeManagementScreen extends StatefulWidget {
   @override
   _CubeManagementScreenState createState() => _CubeManagementScreenState();
@@ -375,7 +375,7 @@ class _CubeManagementScreenState extends State<CubeManagementScreen> {
 
 All operations are automatically logged:
 
-```dart
+```
 // Logged on cube creation
 AppLogger.log(
   'POST /api/v1.0/Guide/new-transport-cube\nRequest:\n...',

@@ -265,16 +265,16 @@ final icon = Icon(TransportCubeState.getIcon('Downloading'));  // Returns: downl
   </Accordion>
   
   <Accordion title="Error Handling">
-    ```dart
-    final response = await transportCubeService.createTransportCube(request);
-    
-    if (!response.isSuccessful) {
-      // Check for specific error codes
-      if (response.messageDetail?.contains('invalid state') ?? false) {
-        // Handle state validation error
-      }
-    }
-    ```
+```
+final response = await transportCubeService.createTransportCube(request);
+
+if (!response.isSuccessful) {
+  // Check for specific error codes
+  if (response.messageDetail?.contains('invalid state') ?? false) {
+    // Handle state validation error
+  }
+}
+```
   </Accordion>
   
   <Accordion title="Performance">

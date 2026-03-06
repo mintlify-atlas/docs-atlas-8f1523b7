@@ -9,7 +9,7 @@ The `GuideService` class provides methods for managing shipping guides, includin
 
 ## Class Definition
 
-```dart
+```
 class GuideService {
   final HttpService _http;
 
@@ -23,7 +23,7 @@ class GuideService {
 
 Retrieves a paginated list of guides filtered by status.
 
-```dart
+```
 Future<ApiResponse<GetGuidesPaginatedResponse>> getGuidesPaginated({
   required int page,
   required int pageSize,
@@ -34,7 +34,7 @@ Future<ApiResponse<GetGuidesPaginatedResponse>> getGuidesPaginated({
 
 **Example:**
 
-```dart
+```
 final response = await guideService.getGuidesPaginated(
   page: 1,
   pageSize: 50,
@@ -59,7 +59,7 @@ if (response.isSuccessful && response.content?.content != null) {
 
 **Search Example:**
 
-```dart
+```
 final response = await guideService.getGuidesPaginated(
   page: 1,
   pageSize: 10,
@@ -81,7 +81,7 @@ if (response.isSuccessful && response.content?.content != null) {
 
 Updates the status of one or more guides.
 
-```dart
+```
 Future<ApiResponse<void>> updateGuideStatus(
   UpdateGuideStatusRequest request, {
   bool suppressAuthHandling = true,
@@ -90,7 +90,7 @@ Future<ApiResponse<void>> updateGuideStatus(
 
 **Example:**
 
-```dart
+```
 final request = UpdateGuideStatusRequest(
   guides: ['PKG001', 'PKG002', 'PKG003'],
   newStatus: 'InWarehouse',
@@ -114,7 +114,7 @@ if (response.isSuccessful) {
 
 **Validation:**
 
-```dart
+```
 if (request.guides.isEmpty) {
   return ApiResponse.error(messageDetail: 'No guides provided');
 }
@@ -124,7 +124,7 @@ if (request.guides.isEmpty) {
 
 Dispatches guides to a client (individual or business).
 
-```dart
+```
 Future<ApiResponse<void>> dispatchToClient(
   DispatchGuideToClientRequest request
 )
@@ -132,7 +132,7 @@ Future<ApiResponse<void>> dispatchToClient(
 
 **Example:**
 
-```dart
+```
 final request = DispatchGuideToClientRequest(
   guides: ['PKG001', 'PKG002'],
   entityRole: 'Individual',
@@ -155,7 +155,7 @@ if (response.isSuccessful) {
 
 ## Complete Usage Example
 
-```dart
+```
 class GuideManagementScreen extends StatefulWidget {
   @override
   _GuideManagementScreenState createState() => _GuideManagementScreenState();
@@ -341,7 +341,7 @@ class _GuideManagementScreenState extends State<GuideManagementScreen> {
 
 ### Update Multiple Guides
 
-```dart
+```
 Future<void> updateMultipleGuides(
   List<String> guideCodes,
   String newStatus,
@@ -375,7 +375,7 @@ Future<void> updateMultipleGuides(
 
 All operations are automatically logged:
 
-```dart
+```
 // Logged on status update
 AppLogger.log(
   'Actualizando estado de 5 guías a InWarehouse',
@@ -397,7 +397,7 @@ AppLogger.log(
 
 ## Error Handling
 
-```dart
+```
 final response = await guideService.updateGuideStatus(request);
 
 if (!response.isSuccessful) {

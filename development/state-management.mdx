@@ -23,7 +23,7 @@ GBI Logistics uses the **Provider pattern** for state management, leveraging Flu
 
 The application root configures all providers using `MultiProvider`:
 
-```dart
+```
 MultiProvider(
   providers: [
     ChangeNotifierProvider<AuthProvider>(
@@ -62,7 +62,7 @@ MultiProvider(
 
 #### State Management
 
-```dart
+```
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   final SecureCredentialsService _secureStorage;
@@ -86,7 +86,7 @@ class AuthProvider extends ChangeNotifier {
 
 **Login Flow:**
 
-```dart
+```
 Future<bool> login(String username, String password) async {
   try {
     _isLoading = true;
@@ -128,7 +128,7 @@ Future<bool> login(String username, String password) async {
 
 **Session Restoration:**
 
-```dart
+```
 Future<void> _restoreSession() async {
   try {
     final loginData = await _authService.restoreSession();
@@ -167,7 +167,7 @@ Future<void> _restoreSession() async {
 
 #### State Management
 
-```dart
+```
 class GuideProvider extends ChangeNotifier {
   final GuideService _guideService;
   
@@ -196,7 +196,7 @@ class GuideProvider extends ChangeNotifier {
 
 **Load Guides with Pagination:**
 
-```dart
+```
 Future<void> loadGuides({
   required int page,
   required int pageSize,
@@ -256,7 +256,7 @@ Future<void> loadGuides({
 
 The provider uses `SharedPreferences` to persist guide states across app restarts:
 
-```dart
+```
 Future<void> updateGuideUiState(String guideCode, String state) async {
   final prefs = await SharedPreferences.getInstance();
   final validatedGuides = Set<String>.from(
@@ -297,7 +297,7 @@ Future<void> updateGuideUiState(String guideCode, String state) async {
 
 #### State Management
 
-```dart
+```
 class TransportCubeProvider extends ChangeNotifier {
   final TransportCubeService _service;
   
@@ -323,7 +323,7 @@ class TransportCubeProvider extends ChangeNotifier {
 
 **Create Transport Cube:**
 
-```dart
+```
 Future<ApiResponse<NewTransportCubeResponseGenericResponse>>
 createTransportCube(List<String> guides, CubeType type) async {
   if (_isLoading) return ApiResponse.error(messageDetail: 'Operación en curso');
@@ -378,7 +378,7 @@ createTransportCube(List<String> guides, CubeType type) async {
 
 **Change Cube State:**
 
-```dart
+```
 Future<bool> changeTransportCubeState(int cubeId, String newState) async {
   if (_isLoading) return false;
   
@@ -448,7 +448,7 @@ Future<bool> changeTransportCubeState(int cubeId, String newState) async {
 
 **Rebuild entire widget:**
 
-```dart
+```
 Consumer<AuthProvider>(
   builder: (context, auth, child) {
     if (auth.isLoading) return LoadingWidget();
@@ -460,7 +460,7 @@ Consumer<AuthProvider>(
 
 **Rebuild specific part:**
 
-```dart
+```
 Column(
   children: [
     StaticHeader(),  // Doesn't rebuild
@@ -477,7 +477,7 @@ Column(
 
 **Listen to changes:**
 
-```dart
+```
 final auth = Provider.of<AuthProvider>(context);
 if (auth.isAuthenticated) {
   // Widget rebuilds when auth state changes
@@ -486,7 +486,7 @@ if (auth.isAuthenticated) {
 
 **Don't listen (for callbacks):**
 
-```dart
+```
 onPressed: () {
   final auth = Provider.of<AuthProvider>(context, listen: false);
   auth.logout();  // Don't rebuild just because we called this
@@ -498,19 +498,19 @@ onPressed: () {
 ### DO ✅
 
 1. **Use private state with public getters:**
-```dart
+```
 bool _isLoading = false;
 bool get isLoading => _isLoading;
 ```
 
 2. **Always call notifyListeners after state changes:**
-```dart
+```
 _isLoading = true;
 notifyListeners();
 ```
 
 3. **Use try-catch-finally for async operations:**
-```dart
+```
 try {
   _isLoading = true;
   notifyListeners();
@@ -524,7 +524,7 @@ try {
 ```
 
 4. **Inject services through constructor:**
-```dart
+```
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   AuthProvider(this._authService);
@@ -532,7 +532,7 @@ class AuthProvider extends ChangeNotifier {
 ```
 
 5. **Use Consumer for selective rebuilds:**
-```dart
+```
 Consumer<GuideProvider>(
   builder: (context, guides, child) => Text('${guides.totalGuides}'),
 )
@@ -541,7 +541,7 @@ Consumer<GuideProvider>(
 ### DON'T ❌
 
 1. **Don't expose mutable state directly:**
-```dart
+```
 // ❌ Bad
 List<Guide> guides = [];
 
@@ -551,7 +551,7 @@ List<Guide> get guides => List.unmodifiable(_guides);
 ```
 
 2. **Don't call notifyListeners in getters:**
-```dart
+```
 // ❌ Bad
 String? get error {
   notifyListeners();  // Never do this!
@@ -560,7 +560,7 @@ String? get error {
 ```
 
 3. **Don't use providers for static data:**
-```dart
+```
 // ❌ Bad - Use regular Provider
 ChangeNotifierProvider<Config>(
   create: (_) => Config(),
@@ -573,7 +573,7 @@ Provider<Config>(
 ```
 
 4. **Don't forget to dispose resources:**
-```dart
+```
 @override
 void dispose() {
   _errorNotifier.dispose();
@@ -585,7 +585,7 @@ void dispose() {
 
 ### Unit Test Example
 
-```dart
+```
 void main() {
   group('AuthProvider', () {
     late MockAuthService mockAuthService;
@@ -621,7 +621,7 @@ void main() {
 
 Prevent duplicate requests:
 
-```dart
+```
 if (_isLoading) return;  // Guard against duplicate calls
 ```
 
@@ -629,7 +629,7 @@ if (_isLoading) return;  // Guard against duplicate calls
 
 Use `Consumer` instead of `Provider.of` at the root:
 
-```dart
+```
 // ❌ Rebuilds entire screen
 Widget build(BuildContext context) {
   final guides = Provider.of<GuideProvider>(context);
@@ -653,7 +653,7 @@ Widget build(BuildContext context) {
 
 For search or frequent updates:
 
-```dart
+```
 Timer? _debounce;
 
 void onSearchChanged(String query) {

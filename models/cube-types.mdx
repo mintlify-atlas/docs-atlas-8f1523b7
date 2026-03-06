@@ -35,7 +35,7 @@ The `CubeType` enum defines the different types of transport cubes based on thei
 
 ## Code Reference
 
-```dart
+```
 enum CubeType {
   transitToWarehouse('TransitToWarehouse'),
   toDispatchToSubcourier('ToDispatchToSubcourier'),
@@ -91,7 +91,7 @@ enum CubeType {
 
 Converts a string value to `CubeType`.
 
-```dart
+```
 final type = CubeType.fromString('ToDispatchToClient');
 print(type); // CubeType.toDispatchToClient
 ```
@@ -102,7 +102,7 @@ print(type); // CubeType.toDispatchToClient
 
 Converts an integer code to `CubeType`.
 
-```dart
+```
 final type = CubeType.fromInt(2);
 print(type); // CubeType.toDispatchToClient
 ```
@@ -113,7 +113,7 @@ print(type); // CubeType.toDispatchToClient
 
 Flexible conversion from dynamic value (handles both int and string).
 
-```dart
+```
 // From integer
 final type1 = CubeType.fromDynamic(1);
 print(type1); // CubeType.toDispatchToSubcourier
@@ -133,7 +133,7 @@ print(type3); // CubeType.transitToWarehouse
 
 ### Parsing API Response
 
-```dart
+```
 factory TransportCubeInfo.fromJson(Map<String, dynamic> json) {
   return TransportCubeInfo(
     id: json['id'] as int,
@@ -145,7 +145,7 @@ factory TransportCubeInfo.fromJson(Map<String, dynamic> json) {
 
 ### Display Type Label
 
-```dart
+```
 String getTypeLabel(CubeType type) {
   switch (type) {
     case CubeType.transitToWarehouse:
@@ -162,7 +162,7 @@ String getTypeLabel(CubeType type) {
 
 ### Filter by Type
 
-```dart
+```
 List<TransportCubeInfo> getClientDispatchCubes(List<TransportCubeInfo> cubes) {
   return cubes.where(
     (cube) => cube.type == CubeType.toDispatchToClient
@@ -172,7 +172,7 @@ List<TransportCubeInfo> getClientDispatchCubes(List<TransportCubeInfo> cubes) {
 
 ### Convert to String
 
-```dart
+```
 final type = CubeType.toDispatchToSubcourier;
 print(type.toString()); // "ToDispatchToSubcourier"
 print(type.value); // "ToDispatchToSubcourier"

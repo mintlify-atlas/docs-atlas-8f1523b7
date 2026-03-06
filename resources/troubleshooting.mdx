@@ -201,7 +201,7 @@ static const List<String> values = [
 **Problem**: Trying to add a guide that already exists in a cube.
 
 **Solution**:
-```dart
+```
 if (error.code == ApiErrorCode.duplicateEntry) {
   // Guide already exists, skip or show warning
   MessageHelper.showWarning(context, 'Guide already in cube');
@@ -299,7 +299,7 @@ Check console output for request/response details.
 
 ### Check Auth State
 
-```dart
+```
 final auth = Provider.of<AuthProvider>(context, listen: false);
 print('Is authenticated: ${auth.isAuthenticated}');
 print('Has token: ${auth.loginData?.token != null}');

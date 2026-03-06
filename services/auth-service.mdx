@@ -9,7 +9,7 @@ The `AuthService` class handles user authentication, session management, token r
 
 ## Class Definition
 
-```dart
+```
 class AuthService {
   final HttpService _http;
   final StorageService _storage;
@@ -27,13 +27,13 @@ class AuthService {
 
 Authenticates a user and establishes a session.
 
-```dart
+```
 Future<ApiResponse<LoginResponse>> login(LoginRequest request)
 ```
 
 **Example:**
 
-```dart
+```
 final request = LoginRequest(
   username: 'operator@example.com',
   password: 'securePassword',
@@ -62,13 +62,13 @@ if (response.isSuccessful && response.content?.token != null) {
 
 Clears the user session and removes stored credentials.
 
-```dart
+```
 Future<void> logout()
 ```
 
 **Example:**
 
-```dart
+```
 await authService.logout();
 // User is now logged out
 // Navigate to login screen
@@ -83,13 +83,13 @@ Navigator.of(context).pushReplacementNamed('/login');
 
 Attempts to restore a previous session on app launch.
 
-```dart
+```
 Future<LoginResponse?> restoreSession()
 ```
 
 **Example:**
 
-```dart
+```
 // On app initialization
 final session = await authService.restoreSession();
 
@@ -111,13 +111,13 @@ if (session != null) {
 
 Automatically refreshes the authentication token when it's about to expire.
 
-```dart
+```
 Future<bool> refreshTokenIfNeeded()
 ```
 
 **Example:**
 
-```dart
+```
 // Set as callback in HttpService
 httpService.tokenRefreshCallback = () async {
   return await authService.refreshTokenIfNeeded();
@@ -141,7 +141,7 @@ if (success) {
 
 **Code:**
 
-```dart
+```
 // Check if refresh is needed
 if (expiresAt.difference(now) > ApiConfig.refreshTokenBeforeExpiry) {
   return true; // Token is still valid
@@ -173,13 +173,13 @@ final response = await _http.post<LoginResponse>(
 
 Validates if the current token is still valid.
 
-```dart
+```
 Future<bool> hasValidToken()
 ```
 
 **Example:**
 
-```dart
+```
 final isValid = await authService.hasValidToken();
 
 if (!isValid) {
@@ -251,7 +251,7 @@ Retry original request
 
 Credentials are stored securely using `SecureCredentialsService`:
 
-```dart
+```
 // Save credentials (for silent login)
 await _secureStorage.saveCredentials(
   username: 'operator@example.com',
@@ -268,7 +268,7 @@ final password = saved['password'];
 
 Session data is stored using `StorageService`:
 
-```dart
+```
 // Save token
 await _storage.setToken(token);
 
@@ -281,7 +281,7 @@ await _storage.clearSession();
 
 ## Integration Example
 
-```dart
+```
 // Initialize services
 final httpService = HttpService(baseUrl: ApiConfig.baseUrl);
 final storageService = StorageService();

@@ -131,7 +131,7 @@ features/
 
 The application entry point orchestrates initialization and dependency injection:
 
-```dart
+```
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await VersionService.instance.initialize();
@@ -192,7 +192,7 @@ See `lib/main.dart:74-347` for complete implementation.
 
 **Purpose**: Define data structures and their transformations.
 
-```dart
+```
 // lib/features/logistics/models/guide.dart
 @immutable
 class Guide {
@@ -217,7 +217,7 @@ class Guide {
 
 **Purpose**: Encapsulate business logic and API communication.
 
-```dart
+```
 // lib/features/logistics/services/guide_service.dart
 class GuideService {
   final HttpService _http;
@@ -240,7 +240,7 @@ class GuideService {
 
 **Purpose**: Manage UI state and coordinate between services and widgets.
 
-```dart
+```
 // lib/features/logistics/providers/guide_provider.dart
 class GuideProvider extends ChangeNotifier {
   final GuideService _guideService;
@@ -268,7 +268,7 @@ class GuideProvider extends ChangeNotifier {
 
 **Purpose**: Full-page views that compose widgets and consume providers.
 
-```dart
+```
 // lib/features/logistics/screens/login_screen.dart
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -288,7 +288,7 @@ class LoginScreen extends StatefulWidget {
 
 **Purpose**: Reusable UI components.
 
-```dart
+```
 // lib/features/logistics/widgets/guide_counter.dart
 class GuideCounter extends StatelessWidget {
   final int count;

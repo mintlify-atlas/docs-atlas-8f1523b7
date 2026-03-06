@@ -520,20 +520,20 @@ Widget buildCubeStateCard(TransportCubeInfo cube) {
 
 <AccordionGroup>
   <Accordion title="State Validation">
-    Always validate the current state before attempting transitions:
-    
-    ```dart
-    Future<bool> canTransitionTo(String currentState, String newState) {
-      final validTransitions = {
-        TransportCubeState.created: [TransportCubeState.sent],
-        TransportCubeState.sent: [TransportCubeState.downloading],
-        TransportCubeState.downloading: [TransportCubeState.downloaded],
-        TransportCubeState.downloaded: [],
-      };
-      
-      return validTransitions[currentState]?.contains(newState) ?? false;
-    }
-    ```
+Always validate the current state before attempting transitions:
+
+```
+Future<bool> canTransitionTo(String currentState, String newState) {
+  final validTransitions = {
+    TransportCubeState.created: [TransportCubeState.sent],
+    TransportCubeState.sent: [TransportCubeState.downloading],
+    TransportCubeState.downloading: [TransportCubeState.downloaded],
+    TransportCubeState.downloaded: [],
+  };
+  
+  return validTransitions[currentState]?.contains(newState) ?? false;
+}
+```
   </Accordion>
   
   <Accordion title="Error Handling">

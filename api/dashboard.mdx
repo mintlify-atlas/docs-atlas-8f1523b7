@@ -86,7 +86,7 @@ GET /api/v1.0/Dashboard/dashboard?version=1.0
 
 ### Flutter/Dart Example
 
-```dart
+```
 import 'package:gbi_logistics/core/config/api_config.dart';
 import 'package:gbi_logistics/core/services/http_service.dart';
 
@@ -229,7 +229,7 @@ GET /api/v1.0/Client/to-dispatch-paginated?version=1.0&Page=1&ItemsByPage=50&Cli
 
 ### Flutter/Dart Example
 
-```dart
+```
 import 'package:gbi_logistics/features/logistics/services/guide_validation_service.dart';
 import 'package:gbi_logistics/features/logistics/models/validate_guide_models.dart';
 
@@ -349,6 +349,24 @@ When retrieving clients for dispatch:
     }
     ```
   </Step>
+  
+  <Step title="Filter by Role Type">
+    Always filter by the appropriate role type based on the operation:
+    - Use `Subcourier` for warehouse-to-subcourier dispatch
+    - Use `FinalClient` for direct-to-consumer delivery
+  </Step>
+  
+  <Step title="Cache Results">
+    Cache client lists locally to avoid repeated API calls:
+    ```dart
+    // Cache for 15 minutes
+    final cachedClients = await cache.get('clients_subcourier');
+    if (cachedClients == null) {
+      final response = await validationService.getClientsToDispatch(...);
+      await cache.set('clients_subcourier', response, duration: Duration(minutes: 15));
+    }
+    ```
+  </Step>
 </Steps>
 
 ## Error Handling
@@ -393,7 +411,7 @@ When retrieving clients for dispatch:
 
 Combine dashboard and client data for a complete dispatch interface:
 
-```dart
+```
 import 'package:gbi_logistics/features/logistics/services/guide_service.dart';
 import 'package:gbi_logistics/features/logistics/services/guide_validation_service.dart';
 import 'package:gbi_logistics/core/config/api_config.dart';

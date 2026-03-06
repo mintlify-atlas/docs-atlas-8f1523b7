@@ -36,7 +36,7 @@ The active environment is determined by the `isDevelopment` constant in `lib/cor
 
 The application uses versioned API endpoints:
 
-```dart
+```
 static const String version = '1.0';
 static String get apiPath => '/api/v$version';
 ```
@@ -69,20 +69,20 @@ All endpoints are centrally defined in the `ApiEndpoints` class:
 
 ### Authentication Endpoints
 
-```dart
+```
 ApiEndpoints.login           // POST /api/v1.0/Auth/login
 ApiEndpoints.refreshToken    // POST /api/v1.0/Auth/refresh-token
 ```
 
 ### Dashboard Endpoints
 
-```dart
+```
 ApiEndpoints.dashboardData   // GET /api/v1.0/Dashboard/dashboard
 ```
 
 ### Guide Management Endpoints
 
-```dart
+```
 ApiEndpoints.guidesPaginated              // GET /api/v1.0/Guide/guides-paginated
 ApiEndpoints.updateGuideStatus            // POST /api/v1.0/Guide/update-status
 ApiEndpoints.dispatchToClient             // POST /api/v1.0/Guide/dispatch-to-client
@@ -91,7 +91,7 @@ ApiEndpoints.validateGuideStatusByProcess // POST /api/v1.0/Guide/validate-guide
 
 ### Transport Cube Endpoints
 
-```dart
+```
 ApiEndpoints.newTransportCube           // POST /api/v1.0/Guide/new-transport-cube
 ApiEndpoints.getTransportCubes          // GET /api/v1.0/Guide/get-transport-cubes
 ApiEndpoints.getTransportCubeDetails    // GET /api/v1.0/Guide/get-transport-cube-details
@@ -103,7 +103,7 @@ ApiEndpoints.closeTransportCube         // POST /api/v1.0/TransportCube/close
 
 ### Client Endpoints
 
-```dart
+```
 ApiEndpoints.clientToDispatchPaginated  // GET /api/v1.0/Client/to-dispatch-paginated
 ```
 

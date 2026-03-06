@@ -466,31 +466,31 @@ void main() async {
   </Accordion>
   
   <Accordion title="Credential Handling">
-    ```dart
-    // NEVER store passwords in plain text
-    // Use SecureCredentialsService for credentials
-    await secureStorage.saveCredentials(
-      username: username,
-      password: password, // Encrypted by platform
-    );
-    
-    // Retrieve when needed for silent login
-    final credentials = await secureStorage.getCredentials();
-    ```
+```
+// NEVER store passwords in plain text
+// Use SecureCredentialsService for credentials
+await secureStorage.saveCredentials(
+  username: username,
+  password: password, // Encrypted by platform
+);
+
+// Retrieve when needed for silent login
+final credentials = await secureStorage.getCredentials();
+```
   </Accordion>
   
   <Accordion title="Token Validation">
-    - Always validate tokens before critical operations
-    - Check token expiration proactively
-    - Handle 401 Unauthorized responses gracefully
-    
-    ```dart
-    if (!await authService.hasValidToken()) {
-      // Token invalid or expired
-      await authService.logout();
-      navigateToLogin();
-    }
-    ```
+- Always validate tokens before critical operations
+- Check token expiration proactively
+- Handle 401 Unauthorized responses gracefully
+
+```
+if (!await authService.hasValidToken()) {
+  // Token invalid or expired
+  await authService.logout();
+  navigateToLogin();
+}
+```
   </Accordion>
   
   <Accordion title="HTTPS Communication">
@@ -500,21 +500,21 @@ void main() async {
   </Accordion>
   
   <Accordion title="Session Timeout">
-    ```dart
-    // Implement automatic logout after inactivity
-    class SessionManager {
-      Timer? _inactivityTimer;
-      static const _timeout = Duration(minutes: 30);
-      
-      void resetInactivityTimer() {
-        _inactivityTimer?.cancel();
-        _inactivityTimer = Timer(_timeout, () async {
-          await authService.logout();
-          navigateToLogin();
-        });
-      }
-    }
-    ```
+```
+// Implement automatic logout after inactivity
+class SessionManager {
+  Timer? _inactivityTimer;
+  static const _timeout = Duration(minutes: 30);
+  
+  void resetInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(_timeout, () async {
+      await authService.logout();
+      navigateToLogin();
+    });
+  }
+}
+```
   </Accordion>
 </AccordionGroup>
 

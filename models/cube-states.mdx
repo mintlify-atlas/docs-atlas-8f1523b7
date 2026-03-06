@@ -45,7 +45,7 @@ Transport cubes follow a defined lifecycle with these states:
 
 ## Code Reference
 
-```dart
+```
 import 'package:flutter/material.dart';
 
 class TransportCubeState {
@@ -117,7 +117,7 @@ class TransportCubeState {
 
 ### Get State Label
 
-```dart
+```
 final state = 'Sent';
 final label = TransportCubeState.getLabel(state);
 print(label); // "Enviado"
@@ -125,7 +125,7 @@ print(label); // "Enviado"
 
 ### Display State Badge
 
-```dart
+```
 Widget buildStateBadge(String state) {
   return Container(
     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -154,7 +154,7 @@ Widget buildStateBadge(String state) {
 
 ### Validate State
 
-```dart
+```
 bool isValidState(String state) {
   return TransportCubeState.values.contains(state);
 }
@@ -177,7 +177,7 @@ Created → Sent → Downloading → Downloaded
 
 When changing cube states via the API:
 
-```dart
+```
 // Change cube state
 final request = ChangeTranportCubesStateRequest(
   transportCubeIds: [cubeId],

@@ -386,22 +386,22 @@ Widget buildGuideCounter(int count) {
   </Accordion>
   
   <Accordion title="Error Handling">
-    ```dart
-    try {
-      final response = await validateGuide(packageCode);
-      
-      if (!response.isSuccessful) {
-        // API error
-        handleApiError(response.messageDetail);
-      } else if (!(response.content?.isValid ?? false)) {
-        // Validation failed
-        showValidationError(response.content?.userMessage);
-      }
-    } catch (e) {
-      // Network or parsing error
-      handleException(e);
-    }
-    ```
+```
+try {
+  final response = await validateGuide(packageCode);
+  
+  if (!response.isSuccessful) {
+    // API error
+    handleApiError(response.messageDetail);
+  } else if (!(response.content?.isValid ?? false)) {
+    // Validation failed
+    showValidationError(response.content?.userMessage);
+  }
+} catch (e) {
+  // Network or parsing error
+  handleException(e);
+}
+```
   </Accordion>
   
   <Accordion title="Performance">
