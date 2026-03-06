@@ -1,0 +1,336 @@
+---
+title: "AuthService"
+description: "Authentication and session management service"
+---
+
+## Overview
+
+The `AuthService` class handles user authentication, session management, token refresh, and credential storage for GBI Logistics.
+
+## Class Definition
+
+```dart
+class AuthService {
+  final HttpService _http;
+  final StorageService _storage;
+  final SecureCredentialsService _secureStorage;
+
+  AuthService(this._http, this._storage, this._secureStorage) {
+    _restoreToken();
+  }
+}
+```
+
+## Core Methods
+
+### login
+
+Authenticates a user and establishes a session.
+
+```dart
+Future<ApiResponse<LoginResponse>> login(LoginRequest request)
+```
+
+**Example:**
+
+```dart
+final request = LoginRequest(
+  username: 'operator@example.com',
+  password: 'securePassword',
+);
+
+final response = await authService.login(request);
+
+if (response.isSuccessful && response.content?.token != null) {
+  // Login successful
+  final user = response.content!;
+  print('Welcome, ${user.username}');
+  print('Role: ${user.roleName}');
+} else {
+  // Login failed
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**What it does:**
+1. Sends login request to API
+2. Stores token in `HttpService`
+3. Saves token and login data to local storage
+4. Returns user information
+
+### logout
+
+Clears the user session and removes stored credentials.
+
+```dart
+Future<void> logout()
+```
+
+**Example:**
+
+```dart
+await authService.logout();
+// User is now logged out
+// Navigate to login screen
+Navigator.of(context).pushReplacementNamed('/login');
+```
+
+**What it does:**
+1. Clears token from `HttpService`
+2. Removes token and session data from storage
+
+### restoreSession
+
+Attempts to restore a previous session on app launch.
+
+```dart
+Future<LoginResponse?> restoreSession()
+```
+
+**Example:**
+
+```dart
+// On app initialization
+final session = await authService.restoreSession();
+
+if (session != null) {
+  // Session restored successfully
+  print('Welcome back, ${session.username}');
+  Navigator.of(context).pushReplacementNamed('/dashboard');
+} else {
+  // No active session
+  Navigator.of(context).pushReplacementNamed('/login');
+}
+```
+
+**Requirements:**
+- User must have an active session (not explicitly logged out)
+- Valid token must exist in storage
+
+### refreshTokenIfNeeded
+
+Automatically refreshes the authentication token when it's about to expire.
+
+```dart
+Future<bool> refreshTokenIfNeeded()
+```
+
+**Example:**
+
+```dart
+// Set as callback in HttpService
+httpService.tokenRefreshCallback = () async {
+  return await authService.refreshTokenIfNeeded();
+};
+
+// Manual refresh
+final success = await authService.refreshTokenIfNeeded();
+if (success) {
+  print('Token refreshed');
+} else {
+  print('Token refresh failed');
+}
+```
+
+**Refresh Strategy:**
+
+1. **Check if refresh is needed** - Compares current time with token expiration
+2. **Attempt silent login** - Uses saved credentials if available
+3. **Fallback to refresh token** - Uses refresh token endpoint
+4. **Update token** - Saves new token and login data
+
+**Code:**
+
+```dart
+// Check if refresh is needed
+if (expiresAt.difference(now) > ApiConfig.refreshTokenBeforeExpiry) {
+  return true; // Token is still valid
+}
+
+// Try silent login first
+final saved = await _secureStorage.getCredentials();
+final username = saved['username'];
+final password = saved['password'];
+
+if (username != null && password != null) {
+  final loginRequest = LoginRequest(username: username, password: password);
+  final loginResponse = await login(loginRequest);
+  if (loginResponse.isSuccessful) {
+    return true;
+  }
+}
+
+// Fallback to refresh token endpoint
+final response = await _http.post<LoginResponse>(
+  ApiEndpoints.refreshToken,
+  {'token': tokenData.token},
+  (json) => LoginResponse.fromJson(json),
+  suppressAuthHandling: true,
+);
+```
+
+### hasValidToken
+
+Validates if the current token is still valid.
+
+```dart
+Future<bool> hasValidToken()
+```
+
+**Example:**
+
+```dart
+final isValid = await authService.hasValidToken();
+
+if (!isValid) {
+  // Token is invalid or expired
+  await authService.logout();
+  Navigator.of(context).pushReplacementNamed('/login');
+}
+```
+
+**How it works:**
+- Makes a test request to the dashboard endpoint
+- Returns `true` if request succeeds
+- Returns `false` if request fails (401 or other error)
+
+## Session Flow
+
+### Initial Login
+
+```
+User enters credentials
+       ↓
+  login() called
+       ↓
+  API authentication
+       ↓
+Token stored in HttpService
+       ↓
+Token & data saved to storage
+       ↓
+  Navigate to dashboard
+```
+
+### App Restart
+
+```
+   App launches
+       ↓
+restoreSession() called
+       ↓
+ Check storage for session
+       ↓
+   Token found?
+    /         \
+  Yes          No
+   ↓            ↓
+Restore    Show login
+```
+
+### Token Refresh
+
+```
+  API request returns 401
+         ↓
+refreshTokenIfNeeded() called
+         ↓
+  Token near expiry?
+    /           \
+  Yes            No
+   ↓              ↓
+Refresh      Continue
+ token
+   ↓
+Retry original request
+```
+
+## Storage
+
+### Secure Credentials
+
+Credentials are stored securely using `SecureCredentialsService`:
+
+```dart
+// Save credentials (for silent login)
+await _secureStorage.saveCredentials(
+  username: 'operator@example.com',
+  password: 'encryptedPassword',
+);
+
+// Retrieve credentials
+final saved = await _secureStorage.getCredentials();
+final username = saved['username'];
+final password = saved['password'];
+```
+
+### Session Data
+
+Session data is stored using `StorageService`:
+
+```dart
+// Save token
+await _storage.setToken(token);
+
+// Save login data
+await _storage.setLoginData(loginData.toJson());
+
+// Clear session
+await _storage.clearSession();
+```
+
+## Integration Example
+
+```dart
+// Initialize services
+final httpService = HttpService(baseUrl: ApiConfig.baseUrl);
+final storageService = StorageService();
+final secureStorage = SecureCredentialsService();
+
+final authService = AuthService(
+  httpService,
+  storageService,
+  secureStorage,
+);
+
+// Set up token refresh callback
+httpService.tokenRefreshCallback = () async {
+  return await authService.refreshTokenIfNeeded();
+};
+
+// Set up session expiration callback
+httpService.onSessionExpired = () async {
+  await authService.logout();
+  Navigator.of(context).pushReplacementNamed('/login');
+};
+
+// Restore session on app launch
+final session = await authService.restoreSession();
+if (session != null) {
+  // Continue to dashboard
+} else {
+  // Show login screen
+}
+```
+
+## Best Practices
+
+1. **Always check response success** - Verify `isSuccessful` before accessing content
+2. **Handle session expiration** - Set up `onSessionExpired` callback
+3. **Enable token refresh** - Configure `tokenRefreshCallback` for seamless UX
+4. **Restore sessions** - Call `restoreSession()` on app launch
+5. **Secure credentials** - Use `SecureCredentialsService` for sensitive data
+6. **Clear on logout** - Always call `logout()` when user signs out
+
+## Security Notes
+
+- Tokens are stored securely in local storage
+- Credentials are encrypted using platform-specific secure storage
+- Token refresh prevents multiple simultaneous refresh attempts
+- Session expiration is handled automatically
+- Failed refresh attempts trigger logout
+
+## Related
+
+- [HttpService](/services/http-service) - Underlying HTTP communication
+- API Authentication Endpoints

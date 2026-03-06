@@ -1,0 +1,306 @@
+---
+title: 'Architecture Overview'
+description: 'Comprehensive overview of GBI Logistics Flutter architecture, technology stack, and key architectural decisions'
+---
+
+## Introduction
+
+GBI Logistics is a Flutter-based mobile application designed for efficient logistics management, focusing on guide dispatch and reception through a transport cube system. The application follows a clean architecture approach with clear separation of concerns between business logic, UI, and data layers.
+
+## Technology Stack
+
+### Core Framework
+- **Flutter SDK**: `>=3.0.0 <4.0.0`
+- **Dart**: Modern reactive programming language
+- **Material Design 3**: Latest Material Design implementation
+
+### State Management
+- **Provider**: `^6.0.5` - Dependency injection and state management
+- **ChangeNotifier**: Built-in Flutter state management pattern
+
+### Networking & Data
+- **HTTP**: `^1.1.0` - RESTful API communication
+- **Shared Preferences**: `^2.2.0` - Local data persistence
+- **Flutter Secure Storage**: `^9.2.4` - Secure credential storage
+
+### UI & Animation
+- **Animated Bottom Navigation Bar**: `^1.3.0` - Smooth navigation transitions
+- **Animate Do**: `^4.2.0` - Pre-built animations
+- **Cupertino Icons**: `^1.0.5` - iOS-style icons
+
+### Utilities
+- **Intl**: `^0.20.2` - Internationalization and date formatting
+- **Package Info Plus**: `^9.0.0` - App version management
+- **URL Launcher**: `^6.2.0` - External URL handling
+
+## Key Architectural Decisions
+
+### 1. Feature-Based Architecture
+
+The codebase is organized by features rather than layers, promoting modularity and scalability:
+
+```
+lib/
+├── core/              # Shared utilities and base services
+└── features/          # Feature modules
+    └── logistics/     # Main logistics feature
+```
+
+**Rationale**: This structure allows teams to work on features independently and makes it easier to extract features into separate packages if needed.
+
+### 2. Provider Pattern for State Management
+
+The application uses Provider for dependency injection and state management:
+
+```dart
+MultiProvider(
+  providers: [
+    ChangeNotifierProvider<AuthProvider>(
+      create: (_) => AuthProvider(authService),
+    ),
+    ChangeNotifierProvider<GuideProvider>(
+      create: (_) => GuideProvider(guideService),
+    ),
+    ChangeNotifierProvider<TransportCubeProvider>(
+      create: (_) => TransportCubeProvider(transportCubeService),
+    ),
+  ],
+  child: MaterialApp(...),
+)
+```
+
+**Rationale**: Provider offers a good balance between simplicity and power, with excellent Flutter integration and minimal boilerplate.
+
+### 3. Service Layer Abstraction
+
+Business logic is encapsulated in service classes that communicate with the API:
+
+- `AuthService` - Authentication and session management
+- `GuideService` - Guide operations
+- `TransportCubeService` - Transport cube operations
+- `HttpService` - Base HTTP communication
+
+**Rationale**: Separating services from providers allows for easier testing and potential reuse across different state management solutions.
+
+### 4. Generic API Response Pattern
+
+A generic `ApiResponse<T>` wrapper handles all API responses consistently:
+
+```dart
+class ApiResponse<T> {
+  final bool isSuccessful;
+  final String? message;
+  final String? messageDetail;
+  final T? content;
+}
+```
+
+**Rationale**: Standardizes error handling and success responses across the entire application.
+
+### 5. Observer Pattern for Lifecycle Management
+
+The `AuthLifecycleObserver` monitors app lifecycle events and refreshes authentication:
+
+```dart
+class AuthLifecycleObserver with WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed) {
+      // Refresh auth token when app resumes
+      await auth.ensureFreshToken();
+    }
+  }
+}
+```
+
+**Rationale**: Ensures the user remains authenticated even after backgrounding the app.
+
+### 6. Token Refresh Strategy
+
+Implements proactive token refresh with multiple strategies:
+- Periodic checks every 15 minutes
+- Refresh 30 minutes before expiration
+- Silent login with stored credentials
+- Automatic retry on API calls
+
+**Rationale**: Provides a seamless user experience without interrupting workflows.
+
+## Architecture Layers
+
+### Presentation Layer
+- **Screens**: Full-page views (e.g., `LoginScreen`, `DashboardScreen`)
+- **Widgets**: Reusable UI components
+- **Providers**: State management and UI logic
+
+### Business Logic Layer
+- **Services**: Business operations and API communication
+- **Models**: Data structures and transformations
+- **Validators**: Input validation logic
+
+### Data Layer
+- **HTTP Service**: Network communication
+- **Storage Service**: Local data persistence
+- **Secure Credentials Service**: Encrypted credential storage
+
+## Development Environment Setup
+
+### Prerequisites
+1. **Flutter SDK** - Version 3.0.0 or higher
+2. **IDE** - VS Code or Android Studio recommended
+3. **Git** - Version control
+
+### Installation Steps
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd gbi-logistics
+```
+
+2. Install dependencies:
+```bash
+flutter pub get
+```
+
+3. Verify Flutter setup:
+```bash
+flutter doctor
+```
+
+4. Run the application:
+```bash
+flutter run
+```
+
+### Environment Configuration
+
+The app supports development and production environments:
+
+```dart
+class ApiConfig {
+  static const bool isDevelopment = true;
+  static const String devBaseUrl = 'http://100.104.120.121:81';
+  static const String prodBaseUrl = 'https://internalapi.gbilogistics.net';
+  
+  static String get baseUrl => isDevelopment ? devBaseUrl : prodBaseUrl;
+}
+```
+
+Change `isDevelopment` to `false` for production builds.
+
+## Build and Deployment Process
+
+### Debug Build
+
+```bash
+# Android
+flutter build apk --debug
+
+# iOS
+flutter build ios --debug
+```
+
+### Release Build
+
+```bash
+# Android APK
+flutter build apk --release
+
+# Android App Bundle (recommended)
+flutter build appbundle --release
+
+# iOS
+flutter build ios --release
+```
+
+### Version Management
+
+Version is defined in `pubspec.yaml`:
+
+```yaml
+version: 1.0.0+8  # Format: version+buildNumber (displays as 1.0.0.8)
+```
+
+- **Major.Minor.Patch**: Semantic versioning
+- **Build Number**: Incremental counter for each build
+
+### Deployment Checklist
+
+1. ✅ Update version in `pubspec.yaml`
+2. ✅ Set `isDevelopment = false` in `api_config.dart`
+3. ✅ Run tests: `flutter test`
+4. ✅ Build release version
+5. ✅ Test on physical device
+6. ✅ Submit to app store
+
+## Error Handling Strategy
+
+### Global Error Handling
+
+The app captures unhandled errors at the root level:
+
+```dart
+FlutterError.onError = (FlutterErrorDetails details) {
+  FlutterError.presentError(details);
+  debugPrint('FlutterError: ${details.toString()}');
+};
+```
+
+### API Error Codes
+
+Standardized error codes from the API:
+- `0`: Success
+- `1`: General error
+- `2`: Authentication error
+- `60`: Session expired
+
+### User-Facing Error Messages
+
+Errors are displayed through:
+- `SnackBar` for temporary notifications
+- Dialog boxes for critical errors
+- Inline validation messages for form inputs
+
+## Performance Considerations
+
+### State Management Optimization
+
+- Loading guards prevent duplicate API calls
+- Selective widget rebuilding with `Consumer`
+- Debouncing for search inputs
+
+### Network Optimization
+
+- 30-second timeout on all requests
+- Request cancellation on navigation
+- Pagination for large data sets
+
+### Memory Management
+
+- Proper disposal of providers and controllers
+- Image caching for network images
+- List virtualization for long lists
+
+## Security Practices
+
+### Authentication
+- JWT tokens for API authentication
+- Secure storage for credentials
+- Automatic token refresh
+- Session expiration handling
+
+### Data Protection
+- HTTPS for all API communication
+- Encrypted storage for sensitive data
+- No hardcoded credentials
+
+### Version Control
+- Minimum version enforcement
+- Optional update notifications
+- Force update capability
+
+## Next Steps
+
+- Explore [Project Structure](/development/project-structure) for detailed directory organization
+- Learn about [State Management](/development/state-management) implementation
+- Review [Design Patterns](/development/design-patterns) used throughout the app

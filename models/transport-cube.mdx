@@ -1,0 +1,134 @@
+---
+title: "Transport Cube Models"
+description: "Transport cube information and details models"
+---
+
+## Overview
+
+Transport cube models represent containers used to group shipping guides during different stages of the logistics process.
+
+## TransportCubeInfo
+
+Basic information about a transport cube, used in list views.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `int` | Unique cube identifier |
+| `registerDateTime` | `DateTime` | Creation timestamp |
+| `state` | `String` | Current state (Created, Sent, Downloading, Downloaded) |
+| `guides` | `int` | Number of guides in the cube |
+| `stateLabel` | `String?` | Localized state label |
+| `allowClose` | `bool` | Whether the cube can be closed |
+| `type` | `CubeType` | Cube type (see [Cube Types](/models/cube-types)) |
+| `typeLabel` | `String?` | Localized type label |
+| `operatorName` | `String?` | Operator who created the cube |
+
+### Code Example
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'cube_type.dart';
+
+@immutable
+class TransportCubeInfo {
+  final int id;
+  final DateTime registerDateTime;
+  final String state;
+  final int guides;
+  final String? stateLabel;
+  final bool allowClose;
+  final CubeType type;
+  final String? typeLabel;
+  final String? operatorName;
+
+  const TransportCubeInfo({
+    required this.id,
+    required this.registerDateTime,
+    required this.state,
+    required this.guides,
+    required this.allowClose,
+    required this.type,
+    this.stateLabel,
+    this.typeLabel,
+    this.operatorName,
+  });
+
+  factory TransportCubeInfo.fromJson(Map<String, dynamic> json) {
+    return TransportCubeInfo(
+      id: json['id'] as int,
+      registerDateTime: DateTime.parse(json['registerDateTime'] as String),
+      state: json['state'] as String,
+      guides: json['guides'] as int,
+      stateLabel: json['StateLabel'] as String? ?? json['stateLabel'] as String?,
+      allowClose: json['allowClose'] as bool? ?? false,
+      type: CubeType.fromDynamic(json['type']) ?? CubeType.transitToWarehouse,
+      typeLabel: json['typeLabel'] as String?,
+      operatorName: json['operatorName'] as String?,
+    );
+  }
+}
+```
+
+## TransportCubeDetails
+
+Complete details of a transport cube including all guides.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `transportCube` | `TransportCubeInfo` | Basic cube information |
+| `guides` | `List<GuideTransportCubeInfo>` | List of guides in the cube |
+
+### Code Example
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'transport_cube_info.dart';
+import 'guide_transport_cube_info.dart';
+
+@immutable
+class TransportCubeDetails {
+  final TransportCubeInfo transportCube;
+  final List<GuideTransportCubeInfo> guides;
+
+  const TransportCubeDetails({
+    required this.transportCube,
+    required this.guides,
+  });
+
+  factory TransportCubeDetails.fromJson(Map<String, dynamic> content) {
+    return TransportCubeDetails(
+      transportCube: TransportCubeInfo.fromJson(
+        content['transportCube'] as Map<String, dynamic>,
+      ),
+      guides: (content['guides'] as List<dynamic>)
+          .map((e) => GuideTransportCubeInfo.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+```
+
+## Usage
+
+These models are used throughout the application when working with transport cubes:
+
+```dart
+// Fetching cube details
+final response = await transportCubeService.getTransportCubeDetails(cubeId);
+if (response.isSuccessful && response.content != null) {
+  final details = response.content!;
+  print('Cube #${details.transportCube.id}');
+  print('State: ${details.transportCube.stateLabel}');
+  print('Guides: ${details.guides.length}');
+}
+```
+
+## Related
+
+- [Cube States](/models/cube-states) - Available cube states
+- [Cube Types](/models/cube-types) - Types of transport cubes
+- [TransportCubeService](/services/transport-cube-service) - Service for cube operations

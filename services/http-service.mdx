@@ -1,0 +1,291 @@
+---
+title: "HttpService"
+description: "Base HTTP service for API communication"
+---
+
+## Overview
+
+The `HttpService` class provides the foundation for all API communication in GBI Logistics. It handles requests, responses, authentication, token management, and error handling.
+
+## Class Definition
+
+```dart
+class HttpService {
+  final String baseUrl;
+  String? _token;
+
+  // Callbacks
+  Function()? onSessionExpired;
+  Future<bool> Function()? onTokenRefreshNeeded;
+  Function(VersionResponse)? onVersionCheckRequired;
+
+  HttpService({
+    required this.baseUrl,
+    this.onSessionExpired,
+    this.onTokenRefreshNeeded,
+  });
+}
+```
+
+## Key Features
+
+### Token Management
+
+#### setToken
+
+Sets or clears the authentication token.
+
+```dart
+void setToken(String? token)
+```
+
+**Usage:**
+
+```dart
+// Set token
+httpService.setToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+
+// Clear token
+httpService.setToken(null);
+```
+
+**Features:**
+- Automatically adds "Bearer " prefix if not present
+- Clears the token if null or empty
+- Resets session expired handling flag
+
+### HTTP Methods
+
+#### GET Request
+
+```dart
+Future<ApiResponse<T>> get<T>(
+  String path,
+  T Function(Map<String, dynamic> json) fromJson, {
+  Map<String, dynamic>? queryParams,
+  bool suppressAuthHandling = false,
+})
+```
+
+**Example:**
+
+```dart
+final response = await httpService.get<TransportCubeDetails>(
+  '/api/v1.0/Guide/get-transport-cube-details',
+  (json) => TransportCubeDetails.fromJson(json['content']),
+  queryParams: {
+    'version': '1.0',
+    'TransportCubeId': 123,
+  },
+);
+
+if (response.isSuccessful) {
+  final details = response.content;
+  print('Cube #${details.transportCube.id}');
+}
+```
+
+#### POST Request
+
+```dart
+Future<ApiResponse<T>> post<T>(
+  String path,
+  dynamic data,
+  T Function(Map<String, dynamic> json) fromJson, {
+  bool suppressAuthHandling = false,
+})
+```
+
+**Example:**
+
+```dart
+final request = LoginRequest(
+  username: 'operator@example.com',
+  password: 'securePassword',
+);
+
+final response = await httpService.post<LoginResponse>(
+  '/api/v1.0/Auth/login',
+  request.toJson(),
+  (json) => LoginResponse.fromJson(json),
+);
+
+if (response.isSuccessful && response.content?.token != null) {
+  httpService.setToken(response.content!.token!);
+}
+```
+
+#### PUT Request
+
+```dart
+Future<ApiResponse<T>> put<T>(
+  String path,
+  dynamic data,
+  T Function(Map<String, dynamic> json)? fromJson, {
+  bool suppressAuthHandling = false,
+})
+```
+
+**Example:**
+
+```dart
+final request = ChangeTranportCubesStateRequest(
+  transportCubeIds: [123, 456],
+  newState: 'Sent',
+);
+
+final response = await httpService.put<void>(
+  '/api/v1.0/Guide/change-transport-cube-state',
+  request.toJson(),
+  (_) {},
+);
+
+if (response.isSuccessful) {
+  print('State changed successfully');
+}
+```
+
+## Authentication & Session Management
+
+### Automatic Token Refresh
+
+When a 401 response is received, `HttpService` automatically attempts to refresh the token:
+
+```dart
+// Set the refresh callback
+httpService.tokenRefreshCallback = () async {
+  return await authService.refreshTokenIfNeeded();
+};
+```
+
+**Flow:**
+1. Request returns 401 Unauthorized
+2. `onTokenRefreshNeeded` callback is invoked
+3. If refresh succeeds, original request is retried
+4. If refresh fails, session expired handler is called
+
+### Session Expiration
+
+```dart
+httpService.onSessionExpired = () {
+  // Clear user data
+  // Navigate to login screen
+  Navigator.of(context).pushReplacementNamed('/login');
+};
+```
+
+## Error Handling
+
+The service automatically handles various error scenarios:
+
+### HTTP Status Codes
+
+| Status | Handling |
+|--------|----------|
+| `401` | Triggers token refresh or session expiration |
+| `503/501` | Returns generic server error message |
+| Other | Parses API error response |
+
+### API Error Codes
+
+```dart
+if (code == ApiErrorCode.sessionExpired || 
+    code == ApiErrorCode.invalidToken) {
+  // Trigger session expired handler
+}
+```
+
+### Network Errors
+
+```dart
+try {
+  final response = await client.get(uri, headers: headers)
+    .timeout(const Duration(seconds: 30));
+} catch (e) {
+  final error = ApiError(
+    code: e is TimeoutException
+      ? ApiErrorCode.timeout
+      : ApiErrorCode.networkError,
+    message: e.toString(),
+  );
+  return ApiResponse.error(messageDetail: error.userMessage);
+}
+```
+
+## Headers
+
+All requests include:
+
+```dart
+Map<String, String> get _headers => {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json',
+  if (_token != null) 'Authorization': _token!,
+  ...VersionService.instance.versionHeaders,
+};
+```
+
+## Version Checking
+
+Automatically checks response headers for version updates:
+
+```dart
+httpService.versionCheckCallback = (versionResponse) {
+  if (versionResponse.updateRequired) {
+    // Show force update dialog
+    showUpdateRequiredDialog();
+  } else if (versionResponse.updateAvailable) {
+    // Show optional update banner
+    showUpdateAvailableBanner();
+  }
+};
+```
+
+## Logging
+
+Requests and responses are automatically logged:
+
+```dart
+AppLogger.apiCall(uri.toString(), method: 'GET');
+AppLogger.apiResponse(
+  uri.toString(),
+  statusCode: response.statusCode,
+  body: sanitizedBody,
+);
+```
+
+**Note:** Sensitive data in cube endpoints is automatically sanitized before logging.
+
+## Configuration
+
+### Setup Example
+
+```dart
+final httpService = HttpService(
+  baseUrl: 'https://api.gbilogistics.com',
+  onSessionExpired: () {
+    // Handle session expiration
+  },
+  onTokenRefreshNeeded: () async {
+    return await authService.refreshTokenIfNeeded();
+  },
+);
+
+httpService.versionCheckCallback = (versionResponse) {
+  // Handle version updates
+};
+```
+
+## Best Practices
+
+1. **Always use fromJson functions** - Parse responses with type-safe converters
+2. **Handle errors gracefully** - Check `isSuccessful` before accessing `content`
+3. **Set up callbacks early** - Configure session and token handlers during initialization
+4. **Use suppressAuthHandling carefully** - Only suppress for auth-related endpoints
+5. **Respect timeouts** - All requests timeout after 30 seconds
+
+## Related
+
+- [AuthService](/services/auth-service) - Authentication and token management
+- [TransportCubeService](/services/transport-cube-service) - Uses HttpService for cube operations
+- [GuideService](/services/guide-service) - Uses HttpService for guide operations

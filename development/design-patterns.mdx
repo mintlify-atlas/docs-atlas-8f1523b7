@@ -1,0 +1,721 @@
+---
+title: 'Design Patterns'
+description: 'Design patterns and architectural patterns implemented in GBI Logistics'
+---
+
+## Overview
+
+GBI Logistics implements several well-established design patterns to ensure maintainability, testability, and scalability. This guide covers the key patterns used throughout the codebase with real examples from the application.
+
+## Repository Pattern (Services)
+
+### Purpose
+
+The Repository Pattern abstracts data access logic and provides a clean API for data operations. In GBI Logistics, service classes act as repositories for different domains.
+
+### Implementation
+
+#### Base HTTP Service
+
+**Location**: `lib/core/services/http_service.dart`
+
+The `HttpService` provides a generic interface for all HTTP operations:
+
+```dart
+class HttpService {
+  final String baseUrl;
+  String? _token;
+  
+  // Callbacks
+  Function()? onSessionExpired;
+  Future<bool> Function()? tokenRefreshCallback;
+  
+  HttpService({required this.baseUrl});
+  
+  // Generic GET request
+  Future<ApiResponse<T>> get<T>(
+    String path,
+    T Function(Map<String, dynamic> json) fromJson, {
+    Map<String, dynamic>? queryParams,
+    bool suppressAuthHandling = false,
+  }) async {
+    final uri = Uri.parse(baseUrl + path)
+        .replace(queryParameters: queryParams);
+    
+    final response = await http.get(uri, headers: _headers)
+        .timeout(const Duration(seconds: 30));
+    
+    // Handle response, errors, token refresh...
+    return ApiResponse<T>(...);
+  }
+  
+  // Generic POST request
+  Future<ApiResponse<T>> post<T>(
+    String path,
+    dynamic data,
+    T Function(Map<String, dynamic> json) fromJson,
+  ) async { ... }
+  
+  // Generic PUT request
+  Future<ApiResponse<T>> put<T>(
+    String path,
+    dynamic data,
+    T Function(Map<String, dynamic> json)? fromJson,
+  ) async { ... }
+}
+```
+
+#### Domain-Specific Service
+
+**Location**: `lib/features/logistics/services/guide_service.dart`
+
+```dart
+class GuideService {
+  final HttpService _http;
+  
+  GuideService(this._http);
+  
+  /// Get paginated guides with filters
+  Future<ApiResponse<GuideListResponse>> getGuidesPaginated({
+    required int page,
+    required int pageSize,
+    required String status,
+    String? guideCode,
+  }) async {
+    return await _http.get(
+      ApiEndpoints.guidesPaginated,
+      (json) => GuideListResponse.fromJson(json),
+      queryParams: {
+        'page': page,
+        'itemsPerPage': pageSize,
+        'status': status,
+        if (guideCode != null) 'guideCode': guideCode,
+      },
+    );
+  }
+  
+  /// Update guide status
+  Future<ApiResponse<void>> updateGuideStatus(
+    UpdateGuideStatusRequest request,
+  ) async {
+    return await _http.put(
+      ApiEndpoints.updateGuideStatus,
+      request.toJson(),
+      (_) => null,
+    );
+  }
+  
+  /// Dispatch guide to client
+  Future<ApiResponse<void>> dispatchToClient(
+    DispatchGuideToClientRequest request,
+  ) async {
+    return await _http.post(
+      ApiEndpoints.dispatchToClient,
+      request.toJson(),
+      (_) => null,
+    );
+  }
+}
+```
+
+**Benefits:**
+- ✅ Centralizes API communication logic
+- ✅ Provides a consistent interface for data operations
+- ✅ Easy to mock for testing
+- ✅ Separates business logic from networking details
+- ✅ Enables swapping data sources without changing consumers
+
+### Authentication Service Example
+
+**Location**: `lib/features/logistics/services/auth_service.dart`
+
+```dart
+class AuthService {
+  final HttpService _http;
+  final StorageService _storage;
+  final SecureCredentialsService _secureStorage;
+  
+  AuthService(this._http, this._storage, this._secureStorage) {
+    _restoreToken();
+  }
+  
+  /// Restore session from storage
+  Future<LoginResponse?> restoreSession() async {
+    final hasSession = await _storage.hasActiveSession();
+    final token = await _storage.getToken();
+    final loginData = await _storage.getLoginData();
+    
+    if (hasSession && token != null) {
+      _http.setToken(token);
+      if (loginData != null) {
+        return LoginResponse.fromJson(loginData);
+      }
+    }
+    return null;
+  }
+  
+  /// Perform login
+  Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
+    final response = await _http.post<LoginResponse>(
+      ApiEndpoints.login,
+      request.toJson(),
+      (json) => LoginResponse.fromJson(json),
+    );
+    
+    if (response.isSuccessful && response.content?.token != null) {
+      final token = response.content!.token!;
+      _http.setToken(token);
+      await _storage.setToken(token);
+      await _storage.setLoginData(response.content!.toJson());
+    }
+    
+    return response;
+  }
+  
+  /// Logout
+  Future<void> logout() async {
+    _http.setToken(null);
+    await _storage.clearSession();
+  }
+  
+  /// Check if token is valid
+  Future<bool> hasValidToken() async {
+    final token = await _storage.getToken();
+    if (token == null) return false;
+    
+    final response = await _http.get<dynamic>(
+      ApiEndpoints.dashboardData,
+      (json) => json['content'],
+      suppressAuthHandling: true,
+    );
+    
+    return response.isSuccessful;
+  }
+}
+```
+
+## Provider Pattern (State Management)
+
+### Purpose
+
+The Provider Pattern manages application state and provides reactive updates to the UI. It implements the Observable pattern where widgets observe state changes.
+
+### Implementation
+
+**Location**: `lib/features/logistics/providers/auth_provider.dart`
+
+```dart
+class AuthProvider extends ChangeNotifier {
+  final AuthService _authService;
+  final SecureCredentialsService _secureStorage;
+  
+  // Private state
+  bool _isLoading = false;
+  String? _error;
+  LoginResponse? _loginData;
+  bool _isAuthenticated = false;
+  
+  // Public getters (read-only access)
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _isAuthenticated;
+  LoginResponse? get loginData => _loginData;
+  
+  AuthProvider(this._authService) {
+    _restoreSession();
+  }
+  
+  /// Perform login and notify listeners
+  Future<bool> login(String username, String password) async {
+    try {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();  // Notify UI of loading state
+      
+      final request = LoginRequest(username: username, password: password);
+      final response = await _authService.login(request);
+      
+      if (response.isSuccessful && response.content != null) {
+        _loginData = response.content;
+        _isAuthenticated = true;
+        _error = null;
+        
+        await _secureStorage.saveCredentials(username, password);
+        notifyListeners();  // Notify UI of success
+        return true;
+      } else {
+        _error = response.messageDetail;
+        notifyListeners();  // Notify UI of error
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();  // Clear loading state
+    }
+  }
+  
+  /// Logout
+  Future<void> logout() async {
+    await _authService.logout();
+    await _secureStorage.clearCredentials();
+    
+    _isAuthenticated = false;
+    _loginData = null;
+    _error = null;
+    notifyListeners();
+  }
+}
+```
+
+**Benefits:**
+- ✅ Reactive UI updates
+- ✅ Centralized state management
+- ✅ Separation of concerns (UI vs business logic)
+- ✅ Easy to test
+- ✅ Type-safe state access
+
+### Usage in Widgets
+
+```dart
+class LoginScreen extends StatefulWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        if (auth.isLoading) {
+          return Center(child: CircularProgressIndicator());
+        }
+        
+        return Column(
+          children: [
+            TextField(...),
+            TextField(...),
+            ElevatedButton(
+              onPressed: () async {
+                final success = await auth.login(username, password);
+                if (success) {
+                  Navigator.pushReplacementNamed(context, '/dashboard');
+                }
+              },
+              child: Text('Login'),
+            ),
+            if (auth.error != null)
+              Text(auth.error!, style: TextStyle(color: Colors.red)),
+          ],
+        );
+      },
+    );
+  }
+}
+```
+
+## Observer Pattern (Lifecycle)
+
+### Purpose
+
+The Observer Pattern allows objects to be notified of changes in other objects. In GBI Logistics, lifecycle observers monitor app state changes.
+
+### Implementation
+
+**Location**: `lib/core/observers/auth_lifecycle_observer.dart`
+
+```dart
+class AuthLifecycleObserver with WidgetsBindingObserver {
+  final BuildContext Function() getContext;
+  bool _disposed = false;
+  
+  AuthLifecycleObserver(this.getContext);
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    if (state == AppLifecycleState.resumed && !_disposed) {
+      AppLogger.log(
+        'App resumed - Refreshing authentication state',
+        source: 'AuthLifecycleObserver'
+      );
+      
+      try {
+        final ctx = getContext();
+        final auth = Provider.of<AuthProvider>(ctx, listen: false);
+        
+        // Attempt to refresh token
+        final refreshed = await auth.ensureFreshToken();
+        
+        if (refreshed) {
+          AppLogger.log('Token refreshed successfully');
+        }
+        
+        // Validate current auth state
+        await auth.checkAuthState();
+      } catch (e) {
+        AppLogger.error('Error refreshing auth state', error: e);
+      }
+    }
+  }
+  
+  void dispose() {
+    _disposed = true;
+  }
+}
+```
+
+### Registration in main.dart
+
+```dart
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  AuthLifecycleObserver? _authObserver;
+  
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_authObserver == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        
+        _authObserver = AuthLifecycleObserver(() {
+          final ctx = _navigatorKey.currentContext;
+          if (ctx == null) throw Exception('Navigator context not available');
+          return ctx;
+        });
+        
+        WidgetsBinding.instance.addObserver(_authObserver!);
+      });
+    }
+  }
+  
+  @override
+  void dispose() {
+    if (_authObserver != null) {
+      WidgetsBinding.instance.removeObserver(_authObserver!);
+      _authObserver!.dispose();
+    }
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+}
+```
+
+**Benefits:**
+- ✅ Automatic token refresh when app resumes
+- ✅ Decoupled lifecycle handling
+- ✅ Easy to add more observers
+- ✅ Testable in isolation
+
+## Factory Pattern (Models)
+
+### Purpose
+
+The Factory Pattern creates objects without specifying their exact class. In GBI Logistics, factory constructors parse JSON into typed models.
+
+### Implementation
+
+**Location**: `lib/features/logistics/models/guide.dart`
+
+```dart
+@immutable
+class Guide {
+  final String packageCode;
+  final String state;
+  final DateTime lastUpdateDateTime;
+  final int? subcourierId;
+  
+  const Guide({
+    required this.packageCode,
+    required this.state,
+    required this.lastUpdateDateTime,
+    this.subcourierId,
+  });
+  
+  /// Factory constructor to create Guide from JSON
+  factory Guide.fromJson(Map<String, dynamic> json) {
+    return Guide(
+      packageCode: json['packageCode'] as String,
+      state: json['state'] as String,
+      lastUpdateDateTime: DateTime.parse(json['lastUpdateDateTime'] as String),
+      subcourierId: json['subcourierId'] as int?,
+    );
+  }
+  
+  /// Convert Guide to JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'packageCode': packageCode,
+      'state': state,
+      'lastUpdateDateTime': lastUpdateDateTime.toIso8601String(),
+      'subcourierId': subcourierId,
+    };
+  }
+  
+  /// Get user-friendly state label
+  String get stateLabel => BackendTrackingState.getLabel(state);
+}
+```
+
+### Complex Factory Example
+
+**Location**: `lib/features/logistics/models/auth_models.dart`
+
+```dart
+class LoginResponse {
+  final String? token;
+  final DateTime? expiresAt;
+  final DashboardData dashboardData;
+  final DispatchRoleTypesAllowed dispatchRoleTypesAllowed;
+  
+  LoginResponse({
+    this.token,
+    this.expiresAt,
+    required this.dashboardData,
+    required this.dispatchRoleTypesAllowed,
+  });
+  
+  factory LoginResponse.fromJson(Map<String, dynamic> json) {
+    final content = json['content'] as Map<String, dynamic>?;
+    
+    if (content == null) {
+      return LoginResponse.empty();
+    }
+    
+    return LoginResponse(
+      token: content['token'] as String?,
+      expiresAt: content['expiresAt'] != null
+          ? DateTime.parse(content['expiresAt'] as String)
+          : null,
+      dashboardData: DashboardData.fromJson(
+        content['dashboardData'] as Map<String, dynamic>,
+      ),
+      dispatchRoleTypesAllowed: DispatchRoleTypesAllowed.fromJson(
+        content['dispatchRoleTypesAllowed'] as Map<String, dynamic>,
+      ),
+    );
+  }
+  
+  /// Factory for empty response
+  factory LoginResponse.empty() {
+    return LoginResponse(
+      dashboardData: DashboardData.empty(),
+      dispatchRoleTypesAllowed: DispatchRoleTypesAllowed.empty(),
+    );
+  }
+  
+  Map<String, dynamic> toJson() {
+    return {
+      'token': token,
+      'expiresAt': expiresAt?.toIso8601String(),
+      'dashboardData': dashboardData.toJson(),
+      'dispatchRoleTypesAllowed': dispatchRoleTypesAllowed.toJson(),
+    };
+  }
+}
+```
+
+**Benefits:**
+- ✅ Type-safe JSON parsing
+- ✅ Centralized object creation logic
+- ✅ Easy to add default values
+- ✅ Support for multiple construction strategies
+- ✅ Compile-time checking
+
+## Singleton Pattern (Services)
+
+### Purpose
+
+Ensures a class has only one instance and provides global access to it.
+
+### Implementation
+
+**Location**: `lib/core/services/version_service.dart`
+
+```dart
+class VersionService {
+  // Private constructor
+  VersionService._();
+  
+  // Singleton instance
+  static final VersionService _instance = VersionService._();
+  
+  // Public accessor
+  static VersionService get instance => _instance;
+  
+  // State
+  Map<String, String> _versionHeaders = {};
+  
+  // Public getter
+  Map<String, String> get versionHeaders => Map.unmodifiable(_versionHeaders);
+  
+  Future<void> initialize() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    _versionHeaders = {
+      'App-Version': packageInfo.version,
+      'Build-Number': packageInfo.buildNumber,
+    };
+  }
+}
+```
+
+**Usage:**
+
+```dart
+// Access anywhere in the app
+final headers = VersionService.instance.versionHeaders;
+```
+
+**Benefits:**
+- ✅ Global access without passing references
+- ✅ Lazy initialization
+- ✅ Thread-safe in Dart (single-threaded)
+- ✅ Controlled instantiation
+
+## Strategy Pattern (Error Handling)
+
+### Purpose
+
+Defines a family of algorithms and makes them interchangeable.
+
+### Implementation
+
+**Location**: `lib/core/models/api_error.dart`
+
+```dart
+class ApiErrorCode {
+  static const int success = 0;
+  static const int generalError = 1;
+  static const int authError = 2;
+  static const int sessionExpired = 60;
+  static const int invalidToken = 61;
+  static const int networkError = -1;
+  static const int timeout = -2;
+  static const int unknown = -3;
+}
+
+class ApiError {
+  final int code;
+  final String message;
+  
+  ApiError({required this.code, required this.message});
+  
+  /// Check if this is an authentication-related error
+  bool get isAuthError =>
+      code == ApiErrorCode.authError ||
+      code == ApiErrorCode.sessionExpired ||
+      code == ApiErrorCode.invalidToken;
+  
+  /// Get user-friendly error message
+  String get userMessage {
+    switch (code) {
+      case ApiErrorCode.sessionExpired:
+        return 'Su sesión ha expirado. Por favor, inicie sesión nuevamente.';
+      case ApiErrorCode.networkError:
+        return 'Error de conexión. Verifique su internet.';
+      case ApiErrorCode.timeout:
+        return 'La operación tardó demasiado. Intente nuevamente.';
+      default:
+        return message.isNotEmpty
+            ? message
+            : 'Ocurrió un error inesperado.';
+    }
+  }
+}
+```
+
+**Benefits:**
+- ✅ Centralized error handling logic
+- ✅ Easy to add new error types
+- ✅ Consistent user messaging
+- ✅ Testable error scenarios
+
+## Dependency Injection
+
+### Purpose
+
+Provides dependencies to objects rather than having them create dependencies themselves.
+
+### Implementation in main.dart
+
+```dart
+class _MyAppState extends State<MyApp> {
+  late final StorageService storageService;
+  late final HttpService httpService;
+  late final AuthService authService;
+  late final GuideService guideService;
+  late final TransportCubeService transportCubeService;
+  
+  void _initializeServices() {
+    // Create base services
+    storageService = StorageService();
+    httpService = HttpService(
+      baseUrl: ApiConfig.baseUrl,
+      onSessionExpired: () {
+        debugPrint('Session expired');
+      },
+    );
+    
+    // Inject dependencies into domain services
+    authService = AuthService(
+      httpService,
+      storageService,
+      secureCredentialsService,
+    );
+    guideService = GuideService(httpService);
+    transportCubeService = TransportCubeService(httpService);
+    
+    // Configure callbacks
+    httpService.tokenRefreshCallback = () async {
+      return await authService.refreshTokenIfNeeded();
+    };
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>(
+          create: (_) => AuthProvider(authService),
+        ),
+        ChangeNotifierProvider<GuideProvider>(
+          create: (_) => GuideProvider(guideService),
+        ),
+        ChangeNotifierProvider<TransportCubeProvider>(
+          create: (_) => TransportCubeProvider(transportCubeService),
+        ),
+      ],
+      child: MaterialApp(...),
+    );
+  }
+}
+```
+
+**Benefits:**
+- ✅ Loose coupling between components
+- ✅ Easy to swap implementations
+- ✅ Testable with mock dependencies
+- ✅ Clear dependency graph
+- ✅ Single responsibility principle
+
+## Summary
+
+| Pattern | Purpose | Implementation |
+|---------|---------|----------------|
+| **Repository** | Abstract data access | Service classes (`AuthService`, `GuideService`) |
+| **Provider** | State management | `AuthProvider`, `GuideProvider`, `TransportCubeProvider` |
+| **Observer** | Lifecycle monitoring | `AuthLifecycleObserver` |
+| **Factory** | Object creation | `fromJson()` factory constructors |
+| **Singleton** | Single instance | `VersionService.instance` |
+| **Strategy** | Interchangeable algorithms | `ApiError` error handling |
+| **Dependency Injection** | Loose coupling | Constructor injection in `main.dart` |
+
+## Next Steps
+
+- Review [State Management](/development/state-management) for detailed provider implementation
+- Check [Project Structure](/development/project-structure) to see where patterns are applied
+- Explore [Architecture Overview](/development/overview) for the complete picture

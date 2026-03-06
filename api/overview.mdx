@@ -1,0 +1,197 @@
+---
+title: API Overview
+description: Overview of the GBI Logistics REST API
+---
+
+## Base URL
+
+The GBI Logistics API is available at different base URLs depending on the environment:
+
+<CodeGroup>
+```text Development
+http://100.104.120.121:81
+```
+
+```text Production
+https://internalapi.gbilogistics.net
+```
+</CodeGroup>
+
+## API Version
+
+All API endpoints are versioned using the `/api/v1.0/` path prefix.
+
+**Current Version:** `1.0`
+
+Example endpoint structure:
+```
+{baseUrl}/api/v1.0/{Resource}/{action}
+```
+
+## Authentication
+
+All API requests (except login) require a valid JWT Bearer token in the Authorization header.
+
+```http
+Authorization: Bearer {your_token_here}
+```
+
+See [Authentication](/api/authentication) for details on obtaining and managing tokens.
+
+## Common Headers
+
+<ParamField header="Authorization" type="string" required>
+  Bearer token obtained from the login endpoint
+</ParamField>
+
+<ParamField header="Content-Type" type="string" default="application/json">
+  Must be set to `application/json` for POST/PUT requests
+</ParamField>
+
+## Query Parameters
+
+Most endpoints accept a `version` query parameter:
+
+<ParamField query="version" type="string" default="1.0">
+  API version to use. Current version is `1.0`
+</ParamField>
+
+## Response Format
+
+All API responses follow a standardized structure:
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Operation successful",
+  "messageDetail": null,
+  "content": {
+    // Response data here
+  }
+}
+```
+
+<ResponseField name="code" type="integer" required>
+  Response code. `0` indicates success, non-zero indicates an error.
+</ResponseField>
+
+<ResponseField name="responseType" type="string">
+  Type of response (e.g., "Success", "Error", "Warning")
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Human-readable success message
+</ResponseField>
+
+<ResponseField name="messageDetail" type="string">
+  Detailed error message when `code` is non-zero
+</ResponseField>
+
+<ResponseField name="content" type="object">
+  The actual response payload. Structure varies by endpoint.
+</ResponseField>
+
+## Error Handling
+
+When an error occurs, the API returns:
+
+- `isSuccessful: false`
+- `code`: Non-zero error code
+- `messageDetail`: Detailed error description
+
+### Common Error Codes
+
+<AccordionGroup>
+  <Accordion title="Authentication Errors">
+    - **401 Unauthorized**: Invalid or expired token
+    - **403 Forbidden**: Insufficient permissions
+  </Accordion>
+
+  <Accordion title="Validation Errors">
+    - **400 Bad Request**: Invalid request parameters
+    - `messageDetail` will contain specifics about validation failures
+  </Accordion>
+
+  <Accordion title="Server Errors">
+    - **500 Internal Server Error**: Unexpected server error
+    - Check `messageDetail` for debugging information
+  </Accordion>
+</AccordionGroup>
+
+### Example Error Response
+
+```json
+{
+  "code": -1,
+  "responseType": "Error",
+  "message": null,
+  "messageDetail": "Invalid guide code provided",
+  "content": null
+}
+```
+
+## Rate Limiting
+
+Currently, there are no documented rate limits. However, best practices recommend:
+
+- Implementing exponential backoff for retries
+- Batching operations when possible
+- Caching responses where appropriate
+
+## Token Management
+
+<Note>
+  Tokens should be refreshed **30 minutes before expiration** to ensure uninterrupted service.
+</Note>
+
+The client automatically:
+- Checks token status every **15 minutes**
+- Refreshes tokens **30 minutes before expiry**
+- Falls back to silent login with saved credentials if refresh fails
+
+## Pagination
+
+Endpoints that return lists support pagination with these parameters:
+
+<ParamField query="Page" type="integer" default="1">
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="ItemsByPage" type="integer" default="20">
+  Number of items per page
+</ParamField>
+
+### Paginated Response Structure
+
+```json
+{
+  "content": {
+    "totalRegister": 150,
+    "registers": [
+      // Array of items
+    ],
+    "userMessage": null
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn how to authenticate and manage tokens
+  </Card>
+  
+  <Card title="Transport Cubes" icon="box" href="/api/transport-cubes">
+    Manage transport cube operations
+  </Card>
+  
+  <Card title="Guides" icon="file-lines" href="/api/guides">
+    Work with shipping guides
+  </Card>
+  
+  <Card title="Dashboard" icon="chart-line" href="/api/dashboard">
+    Access dashboard statistics
+  </Card>
+</CardGroup>

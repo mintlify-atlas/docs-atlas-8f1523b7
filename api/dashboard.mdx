@@ -1,0 +1,442 @@
+---
+title: Dashboard API
+description: Endpoints for dashboard statistics and client information
+---
+
+## Overview
+
+The Dashboard API provides endpoints to retrieve operational statistics and client information for dispatch operations.
+
+## Get Dashboard Statistics
+
+Retrieve dashboard statistics including guide counts by status.
+
+```http
+GET /api/v1.0/Dashboard/dashboard
+```
+
+### Query Parameters
+
+<ParamField query="version" type="string" default="1.0">
+  API version
+</ParamField>
+
+### Request Example
+
+```http
+GET /api/v1.0/Dashboard/dashboard?version=1.0
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Dashboard data with statistics
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="guideStadistics" type="array">
+    Array of guide statistics grouped by status
+  </ResponseField>
+
+  <Expandable title="guideStadistics item">
+    <ResponseField name="status" type="string">
+      Guide status code (e.g., "ReadyForDelivery", "InLocalDistribution")
+    </ResponseField>
+
+    <ResponseField name="count" type="integer">
+      Number of guides in this status
+    </ResponseField>
+  </Expandable>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": null,
+  "messageDetail": null,
+  "content": {
+    "guideStadistics": [
+      {
+        "status": "ReadyForDelivery",
+        "count": 145
+      },
+      {
+        "status": "InLocalDistribution",
+        "count": 67
+      },
+      {
+        "status": "ReceivedInLocalWarehouse",
+        "count": 234
+      },
+      {
+        "status": "TransitToWarehouse",
+        "count": 89
+      },
+      {
+        "status": "EnteredCustoms",
+        "count": 56
+      }
+    ]
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+import 'package:gbi_logistics/core/config/api_config.dart';
+import 'package:gbi_logistics/core/services/http_service.dart';
+
+final response = await httpService.get<dynamic>(
+  ApiEndpoints.dashboardData,
+  (json) => json['content'],
+  queryParams: {'version': ApiConfig.version},
+);
+
+if (response.isSuccessful && response.content != null) {
+  final statistics = response.content['guideStadistics'] as List;
+  
+  print('Dashboard Statistics:');
+  for (final stat in statistics) {
+    print('${stat['status']}: ${stat['count']} guides');
+  }
+}
+```
+
+### Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Home Screen" icon="house">
+    Display real-time guide counts on the main dashboard
+  </Card>
+  
+  <Card title="Status Overview" icon="chart-pie">
+    Show distribution of guides across different statuses
+  </Card>
+  
+  <Card title="Token Validation" icon="shield-check">
+    Use this endpoint to validate if a token is still active
+  </Card>
+  
+  <Card title="Metrics Tracking" icon="chart-line">
+    Track operational metrics and KPIs
+  </Card>
+</CardGroup>
+
+## Get Clients for Dispatch
+
+Retrieve a paginated list of clients available for dispatch operations.
+
+```http
+GET /api/v1.0/Client/to-dispatch-paginated
+```
+
+### Query Parameters
+
+<ParamField query="version" type="string" default="1.0">
+  API version
+</ParamField>
+
+<ParamField query="Page" type="integer" required>
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="ItemsByPage" type="integer" required>
+  Number of items per page
+</ParamField>
+
+<ParamField query="ClientDispatchRoleType" type="string">
+  Optional: Filter by client role type:
+  - `Courier`
+  - `Subcourier`
+  - `FinalClient`
+</ParamField>
+
+### Request Example
+
+```http
+GET /api/v1.0/Client/to-dispatch-paginated?version=1.0&Page=1&ItemsByPage=50&ClientDispatchRoleType=Subcourier
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Paginated client list
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="totalRegister" type="integer">
+    Total number of clients matching the filter
+  </ResponseField>
+
+  <ResponseField name="registers" type="array">
+    Array of client objects
+  </ResponseField>
+
+  <Expandable title="registers item">
+    <ResponseField name="id" type="string">
+      Unique identifier for the client
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      Client name
+    </ResponseField>
+
+    <ResponseField name="identificationNumber" type="string">
+      Client's identification number (tax ID, business registration, etc.)
+    </ResponseField>
+  </Expandable>
+
+  <ResponseField name="userMessage" type="string">
+    Optional message for the user
+  </ResponseField>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": null,
+  "messageDetail": null,
+  "content": {
+    "totalRegister": 3,
+    "registers": [
+      {
+        "id": "SUB-12345",
+        "name": "Express Delivery Co.",
+        "identificationNumber": "1234567890001"
+      },
+      {
+        "id": "SUB-12346",
+        "name": "Fast Logistics",
+        "identificationNumber": "1234567890002"
+      },
+      {
+        "id": "SUB-12347",
+        "name": "Quick Transport Services",
+        "identificationNumber": "1234567890003"
+      }
+    ],
+    "userMessage": null
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+import 'package:gbi_logistics/features/logistics/services/guide_validation_service.dart';
+import 'package:gbi_logistics/features/logistics/models/validate_guide_models.dart';
+
+// Get all subcouriers for dispatch
+final response = await validationService.getClientsToDispatch(
+  dispatchRoleType: DispatchRoleType.subcourier,
+  page: 1,
+  pageSize: 50,
+);
+
+if (response.isSuccessful && response.content != null) {
+  print('Found ${response.content!.totalRegister} clients');
+  
+  for (final client in response.content!.registers) {
+    print('${client.name} (${client.id}) - ${client.identificationNumber}');
+  }
+}
+```
+
+### Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Dispatch Selection" icon="truck-fast">
+    Populate client selection dropdown when dispatching guides
+  </Card>
+  
+  <Card title="Subcourier Management" icon="users">
+    List all subcouriers for assignment
+  </Card>
+  
+  <Card title="Client Lookup" icon="magnifying-glass">
+    Search for specific clients by name or ID
+  </Card>
+  
+  <Card title="Final Client Dispatch" icon="person">
+    Find final clients for direct delivery
+  </Card>
+</CardGroup>
+
+## Dashboard Statistics Breakdown
+
+The dashboard provides real-time counts for various guide states:
+
+<AccordionGroup>
+  <Accordion title="Warehouse Operations">
+    - **ReceivedInLocalWarehouse**: Guides physically in the warehouse
+    - **ReadyForDelivery**: Processed and ready to be dispatched
+    - **TransitToWarehouse**: En route to warehouse
+  </Accordion>
+
+  <Accordion title="Delivery Operations">
+    - **InLocalDistribution**: Currently out for delivery
+    - **DispatchRequested**: Dispatch has been requested
+    - **DeliveredToFinalDestination**: Successfully delivered
+  </Accordion>
+
+  <Accordion title="Customs & Processing">
+    - **EnteredCustoms**: In customs clearance
+    - **PhysicalInspection**: Under physical inspection
+    - **AuthorizedExit**: Cleared and authorized for exit
+    - **DispatchedFromCustoms**: Released from customs
+  </Accordion>
+
+  <Accordion title="Special Status">
+    - **WaitingForTaxPayment**: Awaiting tax/duty payment
+    - **SpecialCase**: Requires special handling
+    - **Observed**: Under observation or review
+  </Accordion>
+</AccordionGroup>
+
+## Client Role Types
+
+When filtering clients for dispatch, you can use these role types:
+
+<ParamField query="ClientDispatchRoleType" type="string">
+  **Courier**: Primary courier companies that handle shipments
+  
+  **Subcourier**: Secondary delivery partners or local couriers
+  
+  **FinalClient**: End recipients of packages
+</ParamField>
+
+<Note>
+  The available role types for a user are returned in the login response under `dispatchRoleTypesAllowed`.
+</Note>
+
+## Pagination Best Practices
+
+When retrieving clients for dispatch:
+
+<Steps>
+  <Step title="Use Large Page Size for Dropdowns">
+    For UI dropdowns, use `ItemsByPage=999999` to get all clients in one request:
+    ```dart
+    final response = await validationService.getClientsToDispatch(
+      dispatchRoleType: DispatchRoleType.subcourier,
+      page: 1,
+      pageSize: 999999, // Get all
+    );
+    ```
+  </Step>
+  
+  <Step title="Filter by Role Type">
+    Always filter by the appropriate role type based on the operation:
+    - Use `Subcourier` for warehouse-to-subcourier dispatch
+    - Use `FinalClient` for direct-to-consumer delivery
+  </Step>
+  
+  <Step title="Cache Results">
+    Cache client lists locally to avoid repeated API calls:
+    ```dart
+    // Cache for 15 minutes
+    final cachedClients = await cache.get('clients_subcourier');
+    if (cachedClients == null) {
+      final response = await validationService.getClientsToDispatch(...);
+      await cache.set('clients_subcourier', response, duration: Duration(minutes: 15));
+    }
+    ```
+  </Step>
+</Steps>
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Invalid Token">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Unauthorized: Invalid or expired token"
+    }
+    ```
+    **Solution**: Refresh the token or re-login
+  </Accordion>
+
+  <Accordion title="No Clients Found">
+    ```json
+    {
+      "code": 0,
+      "content": {
+        "totalRegister": 0,
+        "registers": [],
+        "userMessage": "No clients found for this role type"
+      }
+    }
+    ```
+    This is a successful response with no results.
+  </Accordion>
+
+  <Accordion title="Invalid Role Type">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Invalid ClientDispatchRoleType parameter"
+    }
+    ```
+    **Solution**: Use one of: Courier, Subcourier, FinalClient
+  </Accordion>
+</AccordionGroup>
+
+## Integration Example
+
+Combine dashboard and client data for a complete dispatch interface:
+
+```dart
+import 'package:gbi_logistics/features/logistics/services/guide_service.dart';
+import 'package:gbi_logistics/features/logistics/services/guide_validation_service.dart';
+import 'package:gbi_logistics/core/config/api_config.dart';
+
+// 1. Get dashboard statistics
+final dashboardResponse = await httpService.get<dynamic>(
+  ApiEndpoints.dashboardData,
+  (json) => json['content'],
+  queryParams: {'version': ApiConfig.version},
+);
+
+if (dashboardResponse.isSuccessful) {
+  final stats = dashboardResponse.content['guideStadistics'] as List;
+  final readyForDelivery = stats.firstWhere(
+    (s) => s['status'] == 'ReadyForDelivery',
+    orElse: () => {'count': 0},
+  )['count'];
+  
+  print('Guides ready for delivery: $readyForDelivery');
+}
+
+// 2. Get clients for dispatch
+final clientsResponse = await validationService.getClientsToDispatch(
+  dispatchRoleType: 'Subcourier',
+  page: 1,
+  pageSize: 999999,
+);
+
+if (clientsResponse.isSuccessful && clientsResponse.content != null) {
+  print('Available subcouriers: ${clientsResponse.content!.totalRegister}');
+  
+  // 3. Dispatch guides to selected client
+  final selectedClient = clientsResponse.content!.registers.first;
+  final dispatchRequest = DispatchGuideToClientRequest(
+    entityRole: 'Subcourier',
+    entityIdentifier: selectedClient.id!,
+    guides: ['GBI001234', 'GBI001235'],
+  );
+  
+  final dispatchResponse = await guideService.dispatchToClient(dispatchRequest);
+  
+  if (dispatchResponse.isSuccessful) {
+    print('Guides dispatched successfully to ${selectedClient.name}');
+  }
+}
+```

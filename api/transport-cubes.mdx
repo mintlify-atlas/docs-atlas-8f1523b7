@@ -1,0 +1,646 @@
+---
+title: Transport Cubes API
+description: Endpoints for managing transport cubes and their lifecycle
+---
+
+## Overview
+
+Transport cubes are containers that group multiple shipping guides for organized transport. This API provides endpoints to create, retrieve, update, and close transport cubes.
+
+## Create Transport Cube
+
+Create a new transport cube with a list of guides.
+
+```http
+POST /api/v1.0/Guide/new-transport-cube?version=1.0
+```
+
+### Request Body
+
+<ParamField body="guides" type="array" required>
+  Array of guide codes to include in the cube
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  Type of cube to create. Valid values:
+  - `TransitToWarehouse`
+  - `DispatchToClient`
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "guides": ["GBI001234", "GBI001235", "GBI001236"],
+  "type": "TransitToWarehouse"
+}
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Created transport cube information
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="id" type="integer">
+    Unique identifier for the transport cube
+  </ResponseField>
+
+  <ResponseField name="transportCubeLabelId" type="string">
+    Human-readable label/barcode for the cube
+  </ResponseField>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Transport cube created successfully",
+  "messageDetail": null,
+  "content": {
+    "id": 1523,
+    "transportCubeLabelId": "TC-2026-001523"
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+import 'package:gbi_logistics/features/logistics/models/operation_models.dart';
+import 'package:gbi_logistics/features/logistics/models/cube_type.dart';
+
+final request = NewTransportCubeRequest(
+  guides: ['GBI001234', 'GBI001235', 'GBI001236'],
+  type: CubeType.transitToWarehouse,
+);
+
+final response = await transportCubeService.createTransportCube(request);
+
+if (response.isSuccessful && response.content?.content != null) {
+  final cubeId = response.content!.content!.id;
+  final label = response.content!.content!.transportCubeLabelId;
+  print('Cube created: $label (ID: $cubeId)');
+}
+```
+
+## Get Transport Cubes
+
+Retrieve a paginated list of transport cubes filtered by state.
+
+```http
+GET /api/v1.0/Guide/get-transport-cubes
+```
+
+### Query Parameters
+
+<ParamField query="version" type="string" default="1.0">
+  API version
+</ParamField>
+
+<ParamField query="Page" type="integer" required>
+  Page number (1-indexed)
+</ParamField>
+
+<ParamField query="ItemsByPage" type="integer" required>
+  Number of items per page
+</ParamField>
+
+<ParamField query="State" type="string" required>
+  Filter by cube state:
+  - `Created`
+  - `Sent`
+  - `Downloading`
+  - `Downloaded`
+</ParamField>
+
+### Request Example
+
+```http
+GET /api/v1.0/Guide/get-transport-cubes?version=1.0&Page=1&ItemsByPage=20&State=Created
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Paginated list of transport cubes
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="totalRegister" type="integer">
+    Total number of cubes matching the filter
+  </ResponseField>
+
+  <ResponseField name="registers" type="array">
+    Array of transport cube objects
+  </ResponseField>
+
+  <Expandable title="registers item">
+    <ResponseField name="id" type="integer">
+      Cube ID
+    </ResponseField>
+
+    <ResponseField name="registerDateTime" type="string">
+      ISO 8601 timestamp of cube creation
+    </ResponseField>
+
+    <ResponseField name="state" type="string">
+      Current state: Created, Sent, Downloading, Downloaded
+    </ResponseField>
+
+    <ResponseField name="guides" type="integer">
+      Number of guides in this cube
+    </ResponseField>
+
+    <ResponseField name="stateLabel" type="string">
+      Human-readable state label
+    </ResponseField>
+
+    <ResponseField name="allowClose" type="boolean">
+      Whether this cube can be closed
+    </ResponseField>
+
+    <ResponseField name="type" type="string">
+      Cube type: TransitToWarehouse or DispatchToClient
+    </ResponseField>
+
+    <ResponseField name="typeLabel" type="string">
+      Human-readable type label
+    </ResponseField>
+
+    <ResponseField name="operatorName" type="string">
+      Name of the operator who created the cube
+    </ResponseField>
+  </Expandable>
+
+  <ResponseField name="userMessage" type="string">
+    Optional message for the user
+  </ResponseField>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": null,
+  "messageDetail": null,
+  "content": {
+    "totalRegister": 45,
+    "registers": [
+      {
+        "id": 1523,
+        "registerDateTime": "2026-03-06T14:30:00Z",
+        "state": "Created",
+        "guides": 15,
+        "stateLabel": "Creado",
+        "allowClose": true,
+        "type": "TransitToWarehouse",
+        "typeLabel": "Tránsito a Bodega",
+        "operatorName": "Juan Pérez"
+      }
+    ],
+    "userMessage": null
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final response = await transportCubeService.getTransportCubes(
+  page: 1,
+  itemsPerPage: 20,
+  state: 'Created',
+);
+
+if (response.isSuccessful && response.content != null) {
+  print('Total cubes: ${response.content!.totalRegister}');
+  for (final cube in response.content!.registers) {
+    print('Cube ${cube.id}: ${cube.guides} guides');
+  }
+}
+```
+
+## Get Transport Cube Details
+
+Retrieve detailed information about a specific transport cube, including all its guides.
+
+```http
+GET /api/v1.0/Guide/get-transport-cube-details
+```
+
+### Query Parameters
+
+<ParamField query="version" type="string" default="1.0">
+  API version
+</ParamField>
+
+<ParamField query="TransportCubeId" type="integer" required>
+  ID of the transport cube
+</ParamField>
+
+### Request Example
+
+```http
+GET /api/v1.0/Guide/get-transport-cube-details?version=1.0&TransportCubeId=1523
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Transport cube details
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="transportCube" type="object">
+    Cube information
+  </ResponseField>
+
+  <Expandable title="transportCube properties">
+    <ResponseField name="id" type="integer">
+      Cube ID
+    </ResponseField>
+
+    <ResponseField name="registerDateTime" type="string">
+      Creation timestamp
+    </ResponseField>
+
+    <ResponseField name="state" type="string">
+      Current state
+    </ResponseField>
+
+    <ResponseField name="guides" type="integer">
+      Number of guides
+    </ResponseField>
+
+    <ResponseField name="stateLabel" type="string">
+      State label
+    </ResponseField>
+
+    <ResponseField name="allowClose" type="boolean">
+      Can be closed
+    </ResponseField>
+
+    <ResponseField name="type" type="string">
+      Cube type
+    </ResponseField>
+
+    <ResponseField name="typeLabel" type="string">
+      Type label
+    </ResponseField>
+
+    <ResponseField name="operatorName" type="string">
+      Operator name
+    </ResponseField>
+  </Expandable>
+
+  <ResponseField name="guides" type="array">
+    Array of guide objects in this cube
+  </ResponseField>
+
+  <Expandable title="guides item">
+    <ResponseField name="packageCode" type="string">
+      Guide/package code
+    </ResponseField>
+
+    <ResponseField name="state" type="string">
+      Guide state within cube: Entered or Extracted
+    </ResponseField>
+
+    <ResponseField name="stateLabel" type="string">
+      Human-readable state
+    </ResponseField>
+  </Expandable>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": null,
+  "messageDetail": null,
+  "content": {
+    "transportCube": {
+      "id": 1523,
+      "registerDateTime": "2026-03-06T14:30:00Z",
+      "state": "Created",
+      "guides": 3,
+      "stateLabel": "Creado",
+      "allowClose": true,
+      "type": "TransitToWarehouse",
+      "typeLabel": "Tránsito a Bodega",
+      "operatorName": "Juan Pérez"
+    },
+    "guides": [
+      {
+        "packageCode": "GBI001234",
+        "state": "Entered",
+        "stateLabel": "Ingresado"
+      },
+      {
+        "packageCode": "GBI001235",
+        "state": "Entered",
+        "stateLabel": "Ingresado"
+      },
+      {
+        "packageCode": "GBI001236",
+        "state": "Entered",
+        "stateLabel": "Ingresado"
+      }
+    ]
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final response = await transportCubeService.getTransportCubeDetails(1523);
+
+if (response.isSuccessful && response.content != null) {
+  final details = response.content!;
+  print('Cube ${details.transportCube.id} has ${details.guides.length} guides');
+  
+  for (final guide in details.guides) {
+    print('- ${guide.packageCode}: ${guide.stateLabel}');
+  }
+}
+```
+
+## Change Transport Cube State
+
+Update the state of one or more transport cubes.
+
+```http
+PUT /api/v1.0/Guide/change-transport-cube-state?version=1.0
+```
+
+### Request Body
+
+<ParamField body="transportCubeIds" type="array" required>
+  Array of cube IDs to update
+</ParamField>
+
+<ParamField body="newState" type="string" required>
+  New state to apply:
+  - `Created`
+  - `Sent`
+  - `Downloading`
+  - `Downloaded`
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "transportCubeIds": [1523, 1524, 1525],
+  "newState": "Sent"
+}
+```
+
+### Response
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "State updated successfully",
+  "messageDetail": null,
+  "content": null
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final request = ChangeTranportCubesStateRequest(
+  transportCubeIds: [1523, 1524, 1525],
+  newState: 'Sent',
+);
+
+final response = await transportCubeService.changeTransportCubesState(request);
+
+if (response.isSuccessful) {
+  print('Successfully changed state for ${request.transportCubeIds.length} cubes');
+}
+```
+
+## Close Transport Cube
+
+Close one or more transport cubes to finalize them.
+
+```http
+POST /api/v1.0/TransportCube/close?version=1.0
+```
+
+### Request Body
+
+<ParamField body="transportCubeIds" type="array" required>
+  Array of cube IDs to close
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "transportCubeIds": [1523, 1524]
+}
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Operation result
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="userMessage" type="string">
+    Message for the user about the operation result
+  </ResponseField>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Cubes closed successfully",
+  "messageDetail": null,
+  "content": {
+    "userMessage": "2 cubos cerrados exitosamente"
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final response = await transportCubeService.closeTransportCubes([1523, 1524]);
+
+if (response.isSuccessful) {
+  final message = response.content?.content?.userMessage;
+  print('Success: $message');
+}
+```
+
+## Dispatch Cube to Client
+
+Dispatch one or more transport cubes to a client.
+
+```http
+POST /api/v1.0/Guide/dispatch-cube-to-client?version=1.0
+```
+
+### Request Body
+
+<ParamField body="transportCubeIds" type="array" required>
+  Array of cube IDs to dispatch
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "transportCubeIds": [1523, 1524]
+}
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Operation result
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="userMessage" type="string">
+    Success message for the user
+  </ResponseField>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Cubes dispatched successfully",
+  "messageDetail": null,
+  "content": {
+    "userMessage": "2 cubos despachados exitosamente"
+  }
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final response = await transportCubeService.dispatchCubeToClient([1523, 1524]);
+
+if (response.isSuccessful) {
+  print('Cubes dispatched successfully');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+## Move Guide Between Cubes
+
+Move one or more guides from one cube to another.
+
+```http
+PUT /api/v1.0/Guide/change-cube-guide
+```
+
+### Request Body
+
+<ParamField body="guides" type="array" required>
+  Array of guide codes to move
+</ParamField>
+
+<ParamField body="destinationCubeId" type="integer" required>
+  ID of the destination cube
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "guides": ["GBI001234", "GBI001235"],
+  "destinationCubeId": 1524
+}
+```
+
+### Response
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Guides moved successfully",
+  "messageDetail": null,
+  "content": null
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+final request = ChangeCubeGuideRequest(
+  guides: ['GBI001234', 'GBI001235'],
+  destinationCubeId: 1524,
+);
+
+final response = await transportCubeService.moveGuideBetweenCubes(request);
+
+if (response.isSuccessful) {
+  print('Guides moved successfully');
+}
+```
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Empty Guide List">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "La lista de guías no puede estar vacía"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Invalid Cube State">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Cannot change state: cube is already closed"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Cube Not Found">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Transport cube not found"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Guide Already in Cube">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Guide GBI001234 is already in another cube"
+    }
+    ```
+  </Accordion>
+</AccordionGroup>

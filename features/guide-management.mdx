@@ -1,0 +1,429 @@
+---
+title: 'Guide Management'
+description: 'Tracking, validating, and managing guides throughout the logistics workflow'
+icon: 'clipboard-list'
+---
+
+## Overview
+
+Guides are individual shipment packages tracked through the GBI Logistics system. Each guide represents a single package with a unique identifier and progresses through various states as it moves through the logistics pipeline.
+
+## What is a Guide?
+
+A guide (or shipping guide) is the fundamental tracking unit in the system:
+
+- **Unique Identifier**: Each guide has a `packageCode` that uniquely identifies it
+- **State Tracking**: Guides maintain their current state (e.g., in customs, in transit, delivered)
+- **Timestamp Records**: Every state change is recorded with precise timestamps
+- **Assignment**: Guides can be assigned to subcouriers or contained in transport cubes
+
+## Guide Data Model
+
+The core guide model contains essential tracking information:
+
+```dart lib/features/logistics/models/guide.dart
+class Guide {
+  /// Código único de la guía
+  final String packageCode;
+
+  /// Estado actual de tracking
+  final String state;
+
+  /// Fecha y hora de la última actualización
+  final DateTime lastUpdateDateTime;
+
+  /// Subcorreo asignado (opcional)
+  final int? subcourierId;
+
+  const Guide({
+    required this.packageCode,
+    required this.state,
+    required this.lastUpdateDateTime,
+    this.subcourierId,
+  });
+
+  /// Obtiene la etiqueta del estado para mostrar al usuario
+  String get stateLabel => BackendTrackingState.getLabel(state);
+}
+```
+
+## Guide States Within Cubes
+
+When guides are part of a transport cube, they have specific cube-related states:
+
+<CardGroup cols={2}>
+  <Card title="Entered" icon="check-circle" color="#4CAF50">
+    **Ingresada**
+    
+    The guide has been successfully added to the transport cube.
+  </Card>
+  
+  <Card title="Extracted" icon="times-circle" color="#F44336">
+    **Extraída**
+    
+    The guide has been removed from the transport cube.
+  </Card>
+</CardGroup>
+
+### Guide Cube State Implementation
+
+```dart lib/features/logistics/models/guide_transport_cube_state.dart
+class GuideTransportCubeState {
+  /// Estado cuando la guía ha sido ingresada al cubo
+  static const String entered = 'Entered';
+
+  /// Estado cuando la guía ha sido extraída del cubo
+  static const String extracted = 'Extracted';
+
+  /// Obtiene la etiqueta amigable para mostrar al usuario
+  static String getLabel(String state) {
+    switch (state) {
+      case entered:
+        return 'Ingresada';
+      case extracted:
+        return 'Extraída';
+      default:
+        return 'Desconocido';
+    }
+  }
+
+  /// Color sugerido para UI
+  static int getColor(String state) {
+    switch (state) {
+      case entered:
+        return 0xFF4CAF50;  // Verde
+      case extracted:
+        return 0xFFF44336;  // Rojo
+      default:
+        return 0xFF9E9E9E;  // Gris
+    }
+  }
+
+  /// Ícono sugerido para UI
+  static IconData getIcon(String state) {
+    switch (state) {
+      case entered:
+        return Icons.check_circle;
+      case extracted:
+        return Icons.remove_circle;
+      default:
+        return Icons.help_outline;
+    }
+  }
+}
+```
+
+## Guide Information in Cubes
+
+When viewing guides within a transport cube, the system provides:
+
+```dart lib/features/logistics/models/guide_transport_cube_info.dart
+class GuideTransportCubeInfo {
+  final String packageCode;    // Unique guide identifier
+  final String state;          // Entered | Extracted
+  final String? stateLabel;    // Localized state label
+
+  const GuideTransportCubeInfo({
+    required this.packageCode,
+    required this.state,
+    this.stateLabel,
+  });
+}
+```
+
+## Guide Validation
+
+Before guides can be added to transport cubes or processed, they must pass validation checks.
+
+### Validation by Process
+
+The system validates guide states against required states for specific processes:
+
+```dart Example: Validating Guide State
+final request = ValidateGuideStatusByProcessRequest(
+  packageCode: 'GBI001',
+  processType: 'AddToCube',
+);
+
+final response = await guideValidationService.validateGuideStatusByProcess(request);
+
+if (response.content?.isValid ?? false) {
+  print('Guide is valid for this process');
+} else {
+  final currentState = response.content?.currentState;
+  final requiredState = response.content?.requiredState;
+  final message = response.content?.userMessage;
+  
+  print('Validation failed:');
+  print('Current state: $currentState');
+  print('Required state: $requiredState');
+  print('Message: $message');
+}
+```
+
+### Validation Response Model
+
+```dart Validation Response Structure
+class ValidateGuideStatusResponse {
+  final bool isValid;           // Whether guide passes validation
+  final String? currentState;   // Guide's current state
+  final String? requiredState;  // State required for the process
+  final String? message;        // Technical message
+  final String? userMessage;    // User-friendly message
+}
+```
+
+<Note>
+  The validation service checks both the guide's current state and business rules to determine if a guide can proceed with a specific operation.
+</Note>
+
+## Scanning Guides
+
+Guides are tracked using barcode/QR code scanning throughout the logistics process.
+
+### Scan Workflow
+
+<Steps>
+  <Step title="Scan Package Code">
+    User scans the guide's barcode or QR code using the device camera
+  </Step>
+  
+  <Step title="Validate State">
+    System validates the guide's current state against the expected state for the operation
+  </Step>
+  
+  <Step title="Process Action">
+    If valid, the guide is added to the cube or processed accordingly
+  </Step>
+  
+  <Step title="Update State">
+    Guide state is updated in the backend and UI reflects the change
+  </Step>
+</Steps>
+
+### Scan Implementation
+
+```dart Example: Scanning and Adding to Cube
+// Scan guide barcode
+final packageCode = await scanBarcode();
+
+// Validate guide can be added to cube
+final validationRequest = ValidateGuideStatusByProcessRequest(
+  packageCode: packageCode,
+  processType: 'AddToCube',
+);
+
+final validationResponse = await guideValidationService
+    .validateGuideStatusByProcess(validationRequest);
+
+if (validationResponse.content?.isValid ?? false) {
+  // Add to cube
+  await addGuideToCube(packageCode, cubeId);
+  showSuccess('Guide added successfully');
+} else {
+  showError(validationResponse.content?.userMessage ?? 'Invalid guide state');
+}
+```
+
+## Batch Operations
+
+GBI Logistics supports efficient batch operations on multiple guides.
+
+### Adding Multiple Guides to Cube
+
+```dart Batch Add to Cube
+final guideCodes = ['GBI001', 'GBI002', 'GBI003', 'GBI004'];
+
+// Validate all guides first
+final validationResults = await Future.wait(
+  guideCodes.map((code) => validateGuide(code)),
+);
+
+// Filter valid guides
+final validGuides = guideCodes.where((code) {
+  final index = guideCodes.indexOf(code);
+  return validationResults[index].isValid;
+}).toList();
+
+// Create cube with valid guides
+if (validGuides.isNotEmpty) {
+  final request = NewTransportCubeRequest(
+    guideCodes: validGuides,
+    type: CubeType.transitToWarehouse,
+  );
+  
+  final response = await transportCubeService.createTransportCube(request);
+}
+```
+
+### Batch Scanning
+
+```dart Continuous Scanning Mode
+List<String> scannedGuides = [];
+
+void onBarcodeScanned(String packageCode) async {
+  // Check for duplicates
+  if (scannedGuides.contains(packageCode)) {
+    showWarning('Guide already scanned');
+    return;
+  }
+  
+  // Validate guide
+  final isValid = await validateGuideForCube(packageCode);
+  
+  if (isValid) {
+    scannedGuides.add(packageCode);
+    updateUI();
+    playSuccessSound();
+  } else {
+    playErrorSound();
+    showError('Invalid guide state');
+  }
+}
+
+// When done scanning
+void finishScanning() async {
+  if (scannedGuides.isEmpty) {
+    showWarning('No guides scanned');
+    return;
+  }
+  
+  // Create cube with all scanned guides
+  await createCubeWithGuides(scannedGuides);
+}
+```
+
+## Guide Tracking States
+
+Guides progress through various backend tracking states throughout their journey:
+
+<Tabs>
+  <Tab title="Warehouse States">
+    - **InCustoms**: Guide is in customs processing
+    - **InWarehouse**: Guide has arrived at warehouse
+    - **InTransit**: Guide is being moved between locations
+  </Tab>
+  
+  <Tab title="Dispatch States">
+    - **ReadyForDispatch**: Guide is prepared for delivery
+    - **AssignedToSubcourier**: Guide assigned to delivery partner
+    - **OutForDelivery**: Guide is with courier for delivery
+  </Tab>
+  
+  <Tab title="Final States">
+    - **Delivered**: Guide successfully delivered to recipient
+    - **Failed**: Delivery attempt failed
+    - **Returned**: Guide returned to sender
+  </Tab>
+</Tabs>
+
+<Info>
+  State labels are localized using the `BackendTrackingState.getLabel()` method for display to users.
+</Info>
+
+## UI Components for Guides
+
+The system provides several UI components for guide management:
+
+### Guide Status Indicator
+
+```dart Displaying Guide Status
+Widget buildGuideStatus(Guide guide) {
+  final color = Color(GuideTransportCubeState.getColor(guide.state));
+  final icon = GuideTransportCubeState.getIcon(guide.state);
+  final label = guide.stateLabel;
+  
+  return Container(
+    padding: EdgeInsets.all(8),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: color),
+        SizedBox(width: 8),
+        Text(label, style: TextStyle(color: color)),
+      ],
+    ),
+  );
+}
+```
+
+### Guide Counter
+
+```dart Guide Count Display
+Widget buildGuideCounter(int count) {
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Colors.blue,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Text(
+      '$count guides',
+      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    ),
+  );
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Guide Validation">
+    - Always validate guides before adding to cubes
+    - Display clear error messages when validation fails
+    - Show both current and required states to help users understand issues
+  </Accordion>
+  
+  <Accordion title="Scanning Operations">
+    - Implement duplicate detection to prevent re-scanning
+    - Provide audio/haptic feedback for scan results
+    - Show running count of scanned guides
+    - Allow removing incorrectly scanned guides
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    ```dart
+    try {
+      final response = await validateGuide(packageCode);
+      
+      if (!response.isSuccessful) {
+        // API error
+        handleApiError(response.messageDetail);
+      } else if (!(response.content?.isValid ?? false)) {
+        // Validation failed
+        showValidationError(response.content?.userMessage);
+      }
+    } catch (e) {
+      // Network or parsing error
+      handleException(e);
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Batch validation requests when possible
+    - Cache guide details to reduce API calls
+    - Use pagination for large guide lists
+    - Implement local storage for offline scanning
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Transport Cubes" icon="box" href="/features/transport-cubes">
+    Learn about the container system for guides
+  </Card>
+  
+  <Card title="State Workflow" icon="diagram-project" href="/features/state-workflow">
+    Understand state transitions and business rules
+  </Card>
+  
+  <Card title="Guide API" icon="code" href="/api/guides">
+    Complete API documentation for guide operations
+  </Card>
+</CardGroup>

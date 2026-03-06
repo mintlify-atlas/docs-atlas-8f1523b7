@@ -1,0 +1,379 @@
+---
+title: 'Project Structure'
+description: 'Detailed guide to the GBI Logistics codebase organization, file structure, and navigation'
+---
+
+## Overview
+
+GBI Logistics follows a **feature-first architecture** where code is organized by business features rather than technical layers. This approach promotes modularity, maintainability, and scalability.
+
+## Root Directory Structure
+
+```
+gbi-logistics/
+├── lib/                    # Application source code
+│   ├── core/              # Shared utilities and base services
+│   ├── features/          # Feature modules
+│   └── main.dart          # Application entry point
+├── assets/                # Static assets (images, fonts)
+├── android/               # Android-specific configuration
+├── ios/                   # iOS-specific configuration
+├── test/                  # Unit and widget tests
+└── pubspec.yaml          # Package dependencies
+```
+
+## Core vs Features Organization
+
+### Core Module (`lib/core/`)
+
+The `core` directory contains **shared functionality** used across multiple features:
+
+```
+core/
+├── config/               # Configuration files
+│   └── api_config.dart  # API endpoints and environment config
+├── models/              # Base data models
+│   ├── api_error.dart
+│   ├── api_response.dart
+│   └── ...
+├── observers/           # Lifecycle observers
+│   └── auth_lifecycle_observer.dart
+├── presentation/        # Shared UI components
+│   └── widgets/
+│       ├── logging_state.dart
+│       └── login_background.dart
+├── services/            # Core services
+│   ├── app_logger.dart
+│   ├── app_update_service.dart
+│   ├── http_service.dart
+│   ├── secure_credentials_service.dart
+│   ├── storage_service.dart
+│   └── version_service.dart
+└── utils/               # Utility functions
+    └── batch_processor.dart
+```
+
+**Key Principles:**
+- Contains no business logic
+- Reusable across any feature
+- Minimal dependencies on feature modules
+- Foundation layer of the application
+
+### Features Module (`lib/features/`)
+
+The `features` directory contains **business-specific functionality**:
+
+```
+features/
+└── logistics/           # Main logistics feature
+    ├── models/          # Domain models
+    │   ├── auth_models.dart
+    │   ├── backend_tracking_state.dart
+    │   ├── cube_type.dart
+    │   ├── guide.dart
+    │   ├── guide_details.dart
+    │   ├── guide_transport_cube_info.dart
+    │   ├── guide_transport_cube_state.dart
+    │   ├── operation_models.dart
+    │   ├── requests.dart
+    │   ├── transport_cube_details.dart
+    │   ├── transport_cube_details_response.dart
+    │   ├── transport_cube_history.dart
+    │   ├── transport_cube_info.dart
+    │   ├── transport_cube_scan.dart
+    │   ├── transport_cube_state.dart
+    │   ├── update_guide_status_response.dart
+    │   └── validate_guide_models.dart
+    ├── presentation/     # UI-specific helpers
+    │   ├── constants/
+    │   ├── controllers/
+    │   ├── helpers/
+    │   └── widgets/
+    ├── providers/       # State management
+    │   ├── auth_provider.dart
+    │   ├── guide_provider.dart
+    │   ├── guide_validation_provider.dart
+    │   └── transport_cube_provider.dart
+    ├── screens/         # Full-page views
+    │   ├── login_screen.dart
+    │   ├── dashboard_screen.dart
+    │   ├── customs_dispatch_screen.dart
+    │   ├── customs_dispatch_details_screen.dart
+    │   ├── warehouse_transit_screen.dart
+    │   ├── warehouse_transit_details_screen.dart
+    │   ├── warehouse_reception_screen.dart
+    │   ├── warehouse_reception_details_screen.dart
+    │   ├── client_dispatch_screen.dart
+    │   ├── client_dispatch_details_screen.dart
+    │   ├── new_transport_cube_screen.dart
+    │   ├── guide_scanner_details_screen.dart
+    │   └── ...
+    ├── services/        # Business logic services
+    │   ├── auth_service.dart
+    │   ├── guide_service.dart
+    │   ├── guide_details_service.dart
+    │   ├── guide_validation_service.dart
+    │   ├── transport_cube_service.dart
+    │   ├── app_sounds.dart
+    │   └── native_sound_service.dart
+    └── widgets/         # Feature-specific reusable widgets
+```
+
+**Key Principles:**
+- Self-contained business domain
+- Can import from `core` but not from other features
+- Clear separation of concerns within the feature
+- Future-proof for extraction into a package
+
+## Main Entry Point
+
+### `lib/main.dart`
+
+The application entry point orchestrates initialization and dependency injection:
+
+```dart
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await VersionService.instance.initialize();
+  
+  // Error handling setup
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.toString()}');
+  };
+  
+  runApp(const MyApp());
+}
+```
+
+**Key Responsibilities:**
+- Initialize services before app starts
+- Set up global error handlers
+- Configure error widget builder
+- Launch the main app widget
+
+### `lib/main.dart` - MyApp Widget
+
+The root widget sets up:
+1. **Service initialization** (HTTP, Storage, Auth, etc.)
+2. **Provider configuration** with `MultiProvider`
+3. **Route configuration** with `onGenerateRoute`
+4. **Theme configuration**
+5. **Lifecycle observers**
+6. **Token refresh timers**
+
+See `lib/main.dart:74-347` for complete implementation.
+
+## File Naming Conventions
+
+### General Rules
+- Use **snake_case** for all Dart files: `auth_provider.dart`
+- Use **PascalCase** for class names: `AuthProvider`
+- Use **camelCase** for variables and methods: `isAuthenticated`
+
+### File Type Suffixes
+
+| Type | Suffix | Example |
+|------|--------|----------|
+| Screen | `_screen.dart` | `login_screen.dart` |
+| Widget | `_widget.dart` or none | `guide_counter.dart` |
+| Provider | `_provider.dart` | `auth_provider.dart` |
+| Service | `_service.dart` | `http_service.dart` |
+| Model | None or `_models.dart` | `guide.dart`, `auth_models.dart` |
+| Request | `_request.dart` or in models | `requests.dart` |
+| Response | `_response.dart` or in models | `api_response.dart` |
+| Observer | `_observer.dart` | `auth_lifecycle_observer.dart` |
+| State | `_state.dart` | `transport_cube_state.dart` |
+| Config | `_config.dart` | `api_config.dart` |
+
+## Module Organization
+
+### Models Directory
+
+**Purpose**: Define data structures and their transformations.
+
+```dart
+// lib/features/logistics/models/guide.dart
+@immutable
+class Guide {
+  final String packageCode;
+  final String state;
+  final DateTime lastUpdateDateTime;
+  
+  const Guide({...});
+  
+  factory Guide.fromJson(Map<String, dynamic> json) => ...;
+  Map<String, dynamic> toJson() => ...;
+}
+```
+
+**Conventions:**
+- Immutable data classes
+- Include `fromJson` and `toJson` methods
+- Use `@immutable` annotation
+- Group related models in the same file when appropriate
+
+### Services Directory
+
+**Purpose**: Encapsulate business logic and API communication.
+
+```dart
+// lib/features/logistics/services/guide_service.dart
+class GuideService {
+  final HttpService _http;
+  
+  GuideService(this._http);
+  
+  Future<ApiResponse<GuideListResponse>> getGuidesPaginated({...}) async {
+    // Implementation
+  }
+}
+```
+
+**Conventions:**
+- Single responsibility per service
+- Accept dependencies through constructor
+- Return `ApiResponse<T>` for API calls
+- Use private fields with leading underscore
+
+### Providers Directory
+
+**Purpose**: Manage UI state and coordinate between services and widgets.
+
+```dart
+// lib/features/logistics/providers/guide_provider.dart
+class GuideProvider extends ChangeNotifier {
+  final GuideService _guideService;
+  
+  bool _isLoading = false;
+  bool get isLoading => _isLoading;
+  
+  Future<void> loadGuides() async {
+    _isLoading = true;
+    notifyListeners();
+    // Load data...
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+**Conventions:**
+- Extend `ChangeNotifier`
+- Private state with public getters
+- Call `notifyListeners()` after state changes
+- Accept services through constructor
+
+### Screens Directory
+
+**Purpose**: Full-page views that compose widgets and consume providers.
+
+```dart
+// lib/features/logistics/screens/login_screen.dart
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+  
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+```
+
+**Conventions:**
+- One screen per file
+- Use `Consumer` or `Provider.of` to access state
+- Keep business logic in providers/services
+- Focus on UI composition
+
+### Widgets Directory
+
+**Purpose**: Reusable UI components.
+
+```dart
+// lib/features/logistics/widgets/guide_counter.dart
+class GuideCounter extends StatelessWidget {
+  final int count;
+  final VoidCallback? onTap;
+  
+  const GuideCounter({required this.count, this.onTap, super.key});
+  
+  @override
+  Widget build(BuildContext context) => ...;
+}
+```
+
+**Conventions:**
+- Prefer `StatelessWidget` when possible
+- Accept data through constructor parameters
+- Make widgets configurable with optional parameters
+- Extract reusable widgets from screens
+
+## How to Navigate the Codebase
+
+### Finding a Feature
+
+1. **Start with screens** - Look in `features/logistics/screens/` for the UI
+2. **Check the provider** - Find the corresponding provider in `features/logistics/providers/`
+3. **Review the service** - Check `features/logistics/services/` for business logic
+4. **Examine models** - Look in `features/logistics/models/` for data structures
+
+### Example: Understanding Login Flow
+
+1. **Entry Point**: `features/logistics/screens/login_screen.dart`
+2. **State Management**: `features/logistics/providers/auth_provider.dart`
+3. **Business Logic**: `features/logistics/services/auth_service.dart`
+4. **Network Layer**: `core/services/http_service.dart`
+5. **Data Models**: `features/logistics/models/auth_models.dart`
+
+### Common Code Paths
+
+**Authentication Flow:**
+```
+LoginScreen → AuthProvider → AuthService → HttpService → API
+```
+
+**Guide Operations:**
+```
+GuidesScreen → GuideProvider → GuideService → HttpService → API
+```
+
+**Transport Cube Management:**
+```
+CubeScreen → TransportCubeProvider → TransportCubeService → HttpService → API
+```
+
+## Best Practices
+
+### DO ✅
+- Keep related code together within a feature
+- Use consistent naming conventions
+- Document public APIs with comments
+- Extract reusable widgets
+- Keep screens focused on composition
+
+### DON'T ❌
+- Mix business logic in widgets
+- Create circular dependencies between features
+- Put feature-specific code in `core`
+- Create deeply nested widget trees
+- Hardcode values that should be configurable
+
+## IDE Navigation Tips
+
+### VS Code
+- `Cmd/Ctrl + P` - Quick file open
+- `Cmd/Ctrl + Click` - Go to definition
+- `Cmd/Ctrl + Shift + F` - Search across files
+- `F12` - Go to definition
+- `Shift + F12` - Find all references
+
+### Android Studio
+- `Cmd/Ctrl + Shift + O` - Quick file open
+- `Cmd/Ctrl + B` - Go to declaration
+- `Cmd/Ctrl + Shift + F` - Find in path
+- `Cmd/Ctrl + Alt + Left/Right` - Navigate back/forward
+
+## Next Steps
+
+- Learn about [State Management](/development/state-management) patterns
+- Explore [Design Patterns](/development/design-patterns) used in the codebase
+- Review [Architecture Overview](/development/overview) for the big picture

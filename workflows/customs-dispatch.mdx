@@ -1,0 +1,260 @@
+---
+title: "Customs Dispatch"
+description: "Create and dispatch transport cubes from customs facilities"
+icon: "building-columns"
+---
+
+# Customs Dispatch Workflow
+
+The customs dispatch workflow is the first stage in the GBI Logistics system, where transport cubes are created and prepared for shipment to warehouse facilities.
+
+## Overview
+
+In the customs dispatch process, operators create transport cubes containing shipment guides and prepare them for transit. Cubes in this stage have the **Created** state (displayed as "Despachado de Aduana" in the UI).
+
+## Accessing Customs Dispatch
+
+Navigate to the customs dispatch screen from the dashboard:
+
+1. Open the side menu (hamburger icon)
+2. Select **Despacho en Aduana**
+3. The screen displays all cubes in the **Created** state
+
+## Creating a New Transport Cube
+
+<Steps>
+  <Step title="Open Creation Screen">
+    Tap the floating action button (+) at the bottom right of the customs dispatch screen.
+  </Step>
+  
+  <Step title="Select Cube Type">
+    Choose the appropriate cube type:
+    - **Tránsito a Bodega** (Transit to Warehouse) - Most common type
+    - **Despacho a Subcourier** (Dispatch to Subcourier)
+    - **Despacho a Cliente** (Dispatch to Client)
+    - **Despacho a Courier** (Dispatch to Courier)
+  </Step>
+  
+  <Step title="Add Guides">
+    Add shipment guides to the cube:
+    - **Scan barcode**: Use the camera scanner to scan guide barcodes
+    - **Manual entry**: Type the guide number manually
+    - Each guide is validated in real-time
+    - Successfully added guides appear in the list with "Ingresada" status
+  </Step>
+  
+  <Step title="Review and Confirm">
+    Review the list of guides:
+    - Check the guide count
+    - Verify all guides are correct
+    - Remove any incorrect guides if needed
+    - Tap **Crear Cubo** to create the transport cube
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/screens/customs_dispatch_screen.dart
+/// Creating a new transport cube
+FloatingActionButton(
+  onPressed: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const NewDispatchScreen(),
+      ),
+    );
+  },
+  child: const Icon(Icons.add),
+)
+```
+
+## Managing Cubes in Customs Dispatch
+
+### Viewing Cube Details
+
+Tap any cube card to view its details:
+- Cube ID and creation timestamp
+- Total number of guides
+- Complete list of guides in the cube
+- Guide states (Entered/Extracted)
+
+### Adding Guides to Existing Cubes
+
+<Note>
+You can only add guides to cubes in the **Created** state. Once a cube is sent to transit, guides cannot be added or removed.
+</Note>
+
+1. Open the cube details screen
+2. Tap the **+** button or scan icon
+3. Scan or manually enter guide numbers
+4. Guides are validated and added immediately
+
+### Removing Guides from Cubes
+
+1. Open the cube details screen
+2. Find the guide to remove in the list
+3. Tap the remove icon (X or trash icon)
+4. Confirm the removal
+
+```dart lib/features/logistics/services/transport_cube_service.dart
+/// Change guide state within a cube
+Future<ApiResponse<GenericOperationResponseGenericResponse>> changeCubeGuide({
+  required int transportCubeId,
+  required String packageCode,
+  required String action, // 'Add' or 'Remove'
+}) async {
+  final response = await _httpService.put(
+    ApiEndpoints.changeCubeGuide,
+    body: {
+      'TransportCubeId': transportCubeId,
+      'PackageCode': packageCode,
+      'Action': action,
+    },
+  );
+  return ApiResponse.fromJson(
+    response,
+    (json) => GenericOperationResponseGenericResponse.fromJson(json),
+  );
+}
+```
+
+## Sending Cubes to Transit
+
+Once cubes are ready, send them to warehouse transit:
+
+<Steps>
+  <Step title="Select Cubes">
+    Tap the checkbox on one or more cube cards to select them for transit.
+  </Step>
+  
+  <Step title="Initiate Transit">
+    Tap the **Enviar a Tránsito** button in the app bar. This button only appears when cubes are selected.
+  </Step>
+  
+  <Step title="Confirm Action">
+    Confirm the state change in the dialog. This action cannot be undone.
+  </Step>
+  
+  <Step title="State Update">
+    The system updates the cube state from **Created** to **Sent**. The cubes move to the Warehouse Transit screen.
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/providers/transport_cube_provider.dart
+/// Change selected cubes to Sent state
+Future<ApiResponse<void>> changeSelectedCubesState(String newState) async {
+  if (_isLoading || _selectedCubes.isEmpty) {
+    return ApiResponse.error(messageDetail: 'No hay cubos seleccionados');
+  }
+
+  final request = ChangeTranportCubesStateRequest(
+    transportCubeIds: _selectedCubes.toList(),
+    newState: newState,
+  );
+
+  final response = await _service.changeTransportCubesState(request);
+
+  if (response.isSuccessful) {
+    _selectedCubes.clear();
+    await loadCubes(force: true);
+  }
+  
+  return response;
+}
+```
+
+## Business Rules
+
+<AccordionGroup>
+  <Accordion title="Cube Type Restrictions">
+    - Only **TransitToWarehouse** cubes can be sent to warehouse transit
+    - Other cube types follow different workflows
+    - The system validates cube type before allowing state changes
+  </Accordion>
+  
+  <Accordion title="Guide Validation">
+    - All guides must be validated before adding to a cube
+    - Duplicate guides within the same cube are not allowed
+    - Guides already in other active cubes may be rejected
+    - Invalid guide numbers are rejected with error messages
+  </Accordion>
+  
+  <Accordion title="State Transitions">
+    - Cubes can only move from **Created** to **Sent**
+    - Once sent, cubes cannot return to Created state
+    - Guides cannot be added/removed after the cube is sent
+  </Accordion>
+</AccordionGroup>
+
+## Common Operations
+
+### Filtering and Searching
+
+- Use the search bar to find specific cubes by ID
+- Pull down to refresh the cube list
+- Cubes are sorted by creation date (newest first)
+
+### Batch Operations
+
+You can select multiple cubes and send them all to transit at once:
+
+1. Tap checkboxes on multiple cube cards
+2. The app bar shows the count of selected cubes
+3. Tap **Enviar a Tránsito N cubos**
+4. Confirm the batch operation
+
+<Warning>
+Batch operations affect all selected cubes. Make sure you've selected the correct cubes before confirming.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cannot Create Cube">
+    **Symptoms**: Create button is disabled or error appears
+    
+    **Solutions**:
+    - Ensure at least one guide has been added
+    - Verify all guides are valid (green checkmark)
+    - Check network connectivity
+    - Ensure you have the correct role permissions
+  </Accordion>
+  
+  <Accordion title="Guide Scan Fails">
+    **Symptoms**: Scanner doesn't recognize barcode
+    
+    **Solutions**:
+    - Ensure good lighting conditions
+    - Hold camera steady and at correct distance
+    - Use manual entry if scanner fails repeatedly
+    - Check that barcode is not damaged
+  </Accordion>
+  
+  <Accordion title="Cube Not Appearing">
+    **Symptoms**: Newly created cube doesn't show in list
+    
+    **Solutions**:
+    - Pull down to refresh the list
+    - Check that the correct state filter is selected
+    - Wait a few seconds and refresh again
+    - Check for error messages in the notification bar
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+After sending cubes to transit:
+
+<CardGroup cols={2}>
+  <Card title="Warehouse Transit" icon="truck" href="/workflows/warehouse-transit">
+    Monitor cubes in transit to warehouse
+  </Card>
+  <Card title="Guide Management" icon="barcode" href="/guide/managing-guides">
+    Learn more about managing guides
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+- [Transport Cubes](/features/transport-cubes)
+- [State Workflow](/features/state-workflow)
+- [Creating Cubes](/guide/creating-cubes)

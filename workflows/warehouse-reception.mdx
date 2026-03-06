@@ -1,0 +1,395 @@
+---
+title: "Warehouse Reception"
+description: "Receive and process transport cubes at warehouse facilities"
+icon: "warehouse"
+---
+
+# Warehouse Reception Workflow
+
+The warehouse reception stage is where transport cubes are received, verified, and processed at warehouse facilities. Cubes in this stage have the **Downloading** state (displayed as "Recibido en Bodega Local" in the UI).
+
+## Overview
+
+During warehouse reception, operators physically receive transport cubes, scan and verify all guides, handle any discrepancies, and mark cubes as ready for client dispatch. This is a critical quality control checkpoint.
+
+## Accessing Warehouse Reception
+
+Navigate to the warehouse reception screen:
+
+1. Open the side menu
+2. Select **Recepción en Bodega**
+3. The screen displays all cubes in the **Downloading** state
+
+## Reception Process
+
+The reception workflow ensures all guides are accounted for and properly processed:
+
+<Steps>
+  <Step title="Select Cube">
+    From the reception list, tap the cube you want to process. This opens the cube details screen.
+  </Step>
+  
+  <Step title="Verify Cube Contents">
+    Review the cube information:
+    - Cube ID and metadata
+    - Expected guide count
+    - List of guides that should be in the cube
+    - Guide states (all should be "Ingresada")
+  </Step>
+  
+  <Step title="Scan Guides">
+    Physically verify each guide by scanning:
+    
+    - Use the scan button to open the barcode scanner
+    - Scan each guide barcode as you physically handle it
+    - Successful scans show green confirmation
+    - Already scanned guides show appropriate warnings
+    - Invalid guides show error messages
+    
+    <Info>
+    You can also use the guide validation scanner accessible from the details screen to validate guides by process type.
+    </Info>
+  </Step>
+  
+  <Step title="Handle Exceptions">
+    Address any issues encountered:
+    
+    - **Missing guides**: Document and report guides that are expected but not found
+    - **Extra guides**: Identify guides not listed in the cube
+    - **Damaged guides**: Mark guides with damage and follow proper procedures
+    - **Wrong guides**: Identify guides that belong to different cubes
+  </Step>
+  
+  <Step title="Complete Reception">
+    Once all guides are verified:
+    
+    - Select the cube using its checkbox
+    - Tap the **Completar Recepción** button (or similar action)
+    - Confirm the completion
+    - System updates cube state from **Downloading** to **Downloaded**
+  </Step>
+</Steps>
+
+## Scanning and Validation
+
+### Using the Scanner
+
+The reception process includes integrated scanning:
+
+```dart lib/features/logistics/services/guide_validation_service.dart
+/// Validate guide status by process type
+Future<ApiResponse<ValidateGuideStatusByProcessResponse>> validateGuideStatusByProcess({
+  required String packageCode,
+  required String informationType,
+}) async {
+  final response = await _httpService.post(
+    ApiEndpoints.validateGuideStatusByProcess,
+    body: {
+      'PackageCode': packageCode,
+      'InformationType': informationType,
+    },
+  );
+  return ApiResponse.fromJson(
+    response,
+    (json) => ValidateGuideStatusByProcessResponse.fromJson(json),
+  );
+}
+```
+
+### Validation Types
+
+Different validation types apply at reception:
+
+- **ToReceive**: Validates guide is ready to be received
+- **Reception**: Full reception validation
+- **ToDispatchToClient**: Pre-dispatch validation
+
+### Validation Results
+
+<Tabs>
+  <Tab title="Success">
+    **Green indicator with checkmark**
+    
+    - Guide is valid for the operation
+    - Guide status is correct
+    - No issues found
+    - Proceed with processing
+  </Tab>
+  
+  <Tab title="Warning">
+    **Orange indicator with warning icon**
+    
+    - Guide can be processed but has conditions
+    - May have pending payments
+    - May have special handling requirements
+    - Review details before proceeding
+  </Tab>
+  
+  <Tab title="Error">
+    **Red indicator with error icon**
+    
+    - Guide cannot be processed
+    - Invalid status for reception
+    - Guide not found
+    - Resolve issue before proceeding
+  </Tab>
+</Tabs>
+
+## Completing Reception
+
+When all guides are verified and ready:
+
+<Steps>
+  <Step title="Select Cubes">
+    From the reception list, select one or more cubes that have been fully processed.
+  </Step>
+  
+  <Step title="Initiate Completion">
+    Tap the completion button in the app bar (label varies by screen configuration).
+  </Step>
+  
+  <Step title="Confirm">
+    Confirm that reception is complete and all guides have been verified.
+  </Step>
+  
+  <Step title="State Update">
+    The system:
+    - Changes cube state from **Downloading** to **Downloaded**
+    - Updates guide statuses as needed
+    - Moves cubes to the Client Dispatch screen
+    - Shows success confirmation
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/providers/transport_cube_provider.dart
+/// Change cube state to Downloaded (completing reception)
+Future<bool> changeTransportCubeState(int cubeId, String newState) async {
+  if (_isLoading) return false;
+
+  try {
+    _isLoading = true;
+    notifyListeners();
+
+    final request = ChangeTranportCubesStateRequest(
+      transportCubeIds: [cubeId],
+      newState: newState,
+    );
+    
+    final response = await _service.changeTransportCubesState(request);
+
+    if (response.isSuccessful) {
+      await loadCubes();
+      return true;
+    }
+    
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+## Guide Status Management
+
+### Viewing Guide Details
+
+Each guide in the cube shows:
+
+- **Package code**: Unique guide identifier
+- **State**: Entered or Extracted
+- **Client information**: Destination client
+- **Status**: Current status in the system
+- **Special flags**: Pending payments, holds, etc.
+
+### Handling Guide Issues
+
+<AccordionGroup>
+  <Accordion title="Missing Guide">
+    **Scenario**: Guide is listed in cube but not physically present
+    
+    **Actions**:
+    1. Double-check physical shipment
+    2. Verify guide wasn't removed at customs
+    3. Check cube history for guide removal
+    4. Document the discrepancy
+    5. Contact customs dispatch operator
+    6. Mark guide as extracted if confirmed missing
+  </Accordion>
+  
+  <Accordion title="Extra Guide">
+    **Scenario**: Physical guide present but not in cube list
+    
+    **Actions**:
+    1. Verify guide barcode is correct
+    2. Check if guide belongs to a different cube
+    3. Use guide search to find correct cube
+    4. Contact customs to determine proper handling
+    5. Do not force-add to wrong cube
+  </Accordion>
+  
+  <Accordion title="Damaged Guide">
+    **Scenario**: Guide barcode is damaged or unreadable
+    
+    **Actions**:
+    1. Try manual entry of guide code
+    2. Match against cube list by client/description
+    3. Document damage with photos if possible
+    4. Follow organization's damaged goods procedure
+    5. Complete exception report
+  </Accordion>
+  
+  <Accordion title="Status Validation Error">
+    **Scenario**: Guide fails validation check
+    
+    **Actions**:
+    1. Check error message for specific issue
+    2. Verify guide status in the system
+    3. Confirm guide was properly processed in previous stages
+    4. Check for pending payments or holds
+    5. Contact supervisor if unable to resolve
+  </Accordion>
+</AccordionGroup>
+
+## Business Rules
+
+<Note>
+**All Guides Must Be Verified**: You should physically verify all guides before completing reception, even though the system allows completion without scanning every guide.
+</Note>
+
+<Warning>
+**State Change is Irreversible**: Once a cube is moved to Downloaded state, it cannot return to Downloading. Ensure all verifications are complete before confirming.
+</Warning>
+
+### Reception Requirements
+
+- Cubes must be in **Downloading** state
+- Physical cube must be present at warehouse
+- All guides should be verified (best practice)
+- Discrepancies should be documented
+- Appropriate permissions required
+
+### State Transition Rules
+
+- Only **Downloading** → **Downloaded** transition allowed
+- Cannot skip states or go backwards
+- Transition is atomic (succeeds or fails completely)
+- Guide statuses may be updated during transition
+
+## Batch Reception
+
+Process multiple cubes efficiently:
+
+1. **Organize physically**: Group cubes that arrived together
+2. **Process systematically**: Complete one cube fully before starting the next
+3. **Select multiple**: After processing, select multiple cubes for batch completion
+4. **Confirm together**: Complete all selected cubes in one operation
+
+<Tip>
+Batch operations are more efficient but require careful attention. Ensure all cubes in the batch are fully processed before confirming.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Scanner Not Working">
+    **Symptoms**: Camera doesn't open or doesn't scan barcodes
+    
+    **Solutions**:
+    - Check camera permissions in device settings
+    - Ensure adequate lighting
+    - Clean camera lens
+    - Hold device steady at proper distance (10-20cm)
+    - Try manual entry if scanner fails repeatedly
+    - Restart app if scanner freezes
+  </Accordion>
+  
+  <Accordion title="Cannot Complete Reception">
+    **Symptoms**: Complete button disabled or operation fails
+    
+    **Solutions**:
+    - Verify at least one cube is selected
+    - Check you have proper permissions
+    - Ensure network connectivity
+    - Try completing cubes one at a time
+    - Check for error messages
+    - Verify cube is in Downloading state
+  </Accordion>
+  
+  <Accordion title="Guide Count Mismatch">
+    **Symptoms**: Physical count doesn't match system count
+    
+    **Solutions**:
+    - Review cube guide list carefully
+    - Check for extracted guides (removed at customs)
+    - Verify you have the correct cube
+    - Check if guides were moved to another cube
+    - Review cube history/audit log
+    - Contact customs dispatch operator
+  </Accordion>
+  
+  <Accordion title="Validation Keeps Failing">
+    **Symptoms**: Guide validation returns errors
+    
+    **Solutions**:
+    - Read error message carefully
+    - Verify guide code is correct
+    - Check guide status in system
+    - Ensure guide went through previous stages properly
+    - Check for pending payments or other holds
+    - Use correct validation type (Reception)
+    - Contact supervisor for guidance
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Systematic Processing">
+    - Process one cube completely before starting another
+    - Work in order (oldest cubes first)
+    - Keep physical workspace organized
+    - Document issues immediately as they occur
+  </Accordion>
+  
+  <Accordion title="Quality Control">
+    - Scan every guide, don't rely on visual inspection
+    - Verify client information matches
+    - Check for damage or special handling requirements
+    - Report discrepancies immediately
+  </Accordion>
+  
+  <Accordion title="Communication">
+    - Report issues to supervisor promptly
+    - Coordinate with customs on discrepancies
+    - Document exceptions clearly
+    - Maintain clear handoff to dispatch team
+  </Accordion>
+  
+  <Accordion title="Efficiency">
+    - Use batch operations for multiple similar cubes
+    - Keep scanner ready and clean
+    - Organize guides before scanning
+    - Complete reception promptly to avoid bottlenecks
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+After completing reception:
+
+<CardGroup cols={2}>
+  <Card title="Client Dispatch" icon="box-open" href="/workflows/client-dispatch">
+    Dispatch cubes to clients from warehouse
+  </Card>
+  <Card title="Guide Validation" icon="check-double" href="/guide/validation-scanning">
+    Learn more about guide validation and scanning
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+- [Transport Cubes](/features/transport-cubes)
+- [State Workflow](/features/state-workflow)
+- [Guide Management](/features/guide-management)
+- [Warehouse Transit](/workflows/warehouse-transit)

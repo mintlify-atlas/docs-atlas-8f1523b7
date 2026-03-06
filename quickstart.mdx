@@ -1,80 +1,471 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start Guide
+description: Get started with GBI Logistics in minutes - learn the basics of logging in, navigating the dashboard, and creating your first transport cube
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
-
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+This guide will walk you through your first session with GBI Logistics, from logging in to creating and managing your first transport cube.
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  This guide assumes you already have the GBI Logistics app installed on your device. If not, see the [Installation Guide](/installation) first.
 </Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- GBI Logistics app installed on your Android or iOS device
+- Employee credentials (username and password)
+- Access to the GBI Logistics network (VPN if working remotely)
+- A device with camera for barcode scanning (recommended)
+
+## Step 1: First Login
+
+<Steps>
+  <Step title="Launch the Application">
+    Open the GBI Logistics app from your device. You'll see the login screen with the GBI Logistics logo.
+    
+    <Info>
+      On first launch, the app will check for the minimum required version. If your version is outdated, you'll be prompted to update before logging in.
+    </Info>
+  </Step>
+  
+  <Step title="Enter Your Credentials">
+    Enter your employee credentials:
+    
+    - **Usuario (Username)**: Your employee username
+    - **Contraseña (Password)**: Your employee password
+    
+    ```
+    Example credentials format:
+    Username: jdoe
+    Password: ********
+    ```
+    
+    Click the eye icon to toggle password visibility if needed.
+  </Step>
+  
+  <Step title="Authenticate">
+    Tap the **"Ingresar"** (Login) button. The app will:
+    
+    - Validate your credentials against the backend API
+    - Retrieve your authentication token
+    - Load your dashboard data
+    - Navigate you to the main dashboard
+    
+    <Warning>
+      If you see an error message about "versión mínima" (minimum version), your app needs to be updated. Follow the update prompt to download the latest version.
+    </Warning>
+  </Step>
+</Steps>
+
+### Login Screen Reference
+
+The login screen (lib/features/logistics/screens/login_screen.dart:136) includes:
+
+- **Automatic Authentication Check**: If you're already logged in, you'll be redirected to the dashboard automatically
+- **Form Validation**: Both fields are required before the login button activates
+- **Error Handling**: Clear error messages for invalid credentials or network issues
+- **Token Management**: Automatic token storage for future sessions
+
+## Step 2: Dashboard Overview
+
+Once logged in, you'll see the main dashboard displaying real-time logistics statistics.
+
+### Dashboard Layout
+
+```
+┌─────────────────────────────────────┐
+│ ☰  Dashboard                    👤  │
+├─────────────────────────────────────┤
+│                                     │
+│  ¡Bienvenido, [Your Name]!         │
+│  [Company Name]                     │
+│                                     │
+├─────────────────────────────────────┤
+│  Estadísticas de Guías              │
+│                                     │
+│  ┌──────┐  ┌──────┐  ┌──────┐     │
+│  │  42  │  │  18  │  │  67  │     │
+│  │Aduana│  │Bodega│  │Listo │     │
+│  └──────┘  └──────┘  └──────┘     │
+│                                     │
+│  ┌──────┐  ┌──────┐               │
+│  │   5  │  │  12  │               │
+│  │Tráns.│  │Otros │               │
+│  └──────┘  └──────┘               │
+│                                     │
+├─────────────────────────────────────┤
+│  v1.0.0.8                          │
+└─────────────────────────────────────┘
+```
+
+### Understanding the Statistics
+
+The dashboard shows guide counts by state (lib/features/logistics/screens/dashboard_screen.dart:136):
+
+<CardGroup cols={2}>
+  <Card title="Despachado de Aduana" icon="truck">
+    Guides in **Created** state - ready for customs dispatch
+  </Card>
+  
+  <Card title="Tránsito a Bodega" icon="road">
+    Guides in **Sent** state - in transit to warehouse
+  </Card>
+  
+  <Card title="Recibido en Bodega Local" icon="warehouse">
+    Guides in **Downloading** state - being received at warehouse
+  </Card>
+  
+  <Card title="Listo para Entrega" icon="check-circle">
+    Guides in **Downloaded** state - ready for client dispatch
+  </Card>
+</CardGroup>
+
+### Dashboard Features
+
+- **Pull to Refresh**: Swipe down to reload the latest statistics
+- **Tap to Navigate**: Tap any statistics card to view guides in that state
+- **Version Display**: Current app version shown at the bottom
+- **Welcome Message**: Personalized greeting with your name and company
+
+<Info>
+  The dashboard automatically refreshes data when you navigate back to it from other screens.
+</Info>
+
+## Step 3: Navigating the App
+
+### Opening the Navigation Menu
+
+Tap the **hamburger menu icon (☰)** in the top-left corner to access all screens:
+
+<Steps>
+  <Step title="Main Operations">
+    - **Dashboard**: Return to the main dashboard
+    - **Despacho en Aduana**: Customs dispatch operations (Created state)
+    - **Tránsito a Bodega**: View cubes in transit (Sent state)
+    - **Recepción en Bodega**: Warehouse reception (Downloading state)
+    - **Despacho a Cliente**: Client dispatch (Downloaded state)
+  </Step>
+  
+  <Step title="Support Functions">
+    - **Nuevo Cubo**: Create a new transport cube
+    - **Escáner de Guías**: Scan individual guides for details
+  </Step>
+  
+  <Step title="Account">
+    - **Cerrar Sesión**: Log out of the application
+  </Step>
+</Steps>
+
+## Step 4: Creating Your First Transport Cube
+
+Let's create a transport cube to group guides for shipment from customs to warehouse.
+
+<Steps>
+  <Step title="Navigate to New Cube Screen">
+    From the drawer menu, tap **"Nuevo Cubo"** (New Cube).
+    
+    You'll see the New Transport Cube screen with:
+    - A scan box for adding guides
+    - A list of scanned guides (initially empty)
+    - A create button at the bottom
+  </Step>
+  
+  <Step title="Scan Guides">
+    Use the scan box to add guides to your cube:
+    
+    1. **Tap the scan input field** or use a barcode scanner
+    2. **Scan or enter the guide number** (package code)
+    3. **Wait for validation** - the app will:
+       - Verify the guide exists
+       - Check the guide is in the correct state
+       - Add it to the cube if valid
+       - Show an error if invalid
+    
+    <Note>
+      Valid guides must be in the "ReceivedInLocalWarehouse" tracking state to be added to a new cube.
+    </Note>
+    
+    Repeat this process for all guides you want to include in the cube.
+  </Step>
+  
+  <Step title="Review Guide List">
+    After scanning, review your guide list:
+    
+    - Each guide shows its package code and current state
+    - A counter shows total guides added
+    - You can remove individual guides if needed (swipe or tap delete icon)
+    
+    <Warning>
+      You must add at least one guide to create a transport cube. The create button will be disabled if the list is empty.
+    </Warning>
+  </Step>
+  
+  <Step title="Create the Cube">
+    When you're ready, tap the **"Crear Cubo"** (Create Cube) button at the bottom.
+    
+    The app will:
+    - Send a request to create the cube via API (lib/features/logistics/services/transport_cube_service.dart:18)
+    - Assign a unique cube ID
+    - Set the initial state to **Created**
+    - Navigate you to the Customs Dispatch Details screen
+    
+    ```dart
+    // API Request format
+    POST /api/v1.0/Guide/new-transport-cube
+    {
+      "packageCodes": [
+        "PKG001",
+        "PKG002",
+        "PKG003"
+      ]
+    }
+    ```
+  </Step>
+  
+  <Step title="Confirm Creation">
+    You'll see a success message and be taken to the cube details screen where you can:
+    
+    - View all guides in the cube
+    - Add more guides (while in Created state)
+    - Remove guides if needed
+    - Send the cube to transit when ready
+  </Step>
+</Steps>
+
+## Step 5: Managing Your Transport Cube
+
+Now that you've created a cube, let's explore what you can do with it.
+
+### Viewing Cube Details
+
+The Customs Dispatch Details screen shows:
+
+- **Cube Header**: Cube ID, state badge, and registration date
+- **Guide Counter**: Total number of guides in the cube
+- **Guide List**: All guides with their states and details
+- **Action Buttons**: State-specific actions (send to transit, add/remove guides)
+
+### Adding More Guides
+
+While in **Created** state, you can add more guides:
+
+<Steps>
+  <Step title="Open Scan Box">
+    On the cube details screen, use the scan box at the top to add guides.
+  </Step>
+  
+  <Step title="Scan Additional Guides">
+    Scan guide barcodes just like during creation. Each valid guide will be added to the cube.
+  </Step>
+  
+  <Step title="Automatic Refresh">
+    The guide list updates automatically as you add guides.
+  </Step>
+</Steps>
+
+### Sending Cube to Transit
+
+When your cube is ready for shipment:
+
+<Steps>
+  <Step title="Review Guides">
+    Verify all guides are correct and accounted for.
+  </Step>
+  
+  <Step title="Tap Send to Transit">
+    Tap the **"Enviar a Tránsito"** button (if available for your role).
+  </Step>
+  
+  <Step title="Confirm Action">
+    Confirm the state change when prompted.
+    
+    The cube will:
+    - Change to **Sent** state
+    - Move to the "Tránsito a Bodega" screen
+    - Become read-only (no more guide additions)
+  </Step>
+</Steps>
+
+<Info>
+  Once a cube is in Sent state, it cannot be modified until it reaches the warehouse and enters the Downloading state.
+</Info>
+
+## Step 6: Warehouse Reception Workflow
+
+When cubes arrive at the warehouse, follow this reception process:
+
+<Steps>
+  <Step title="Navigate to Warehouse Reception">
+    From the drawer menu, select **"Recepción en Bodega"**.
+    
+    You'll see all cubes in **Downloading** state (or change a Sent cube to Downloading state).
+  </Step>
+  
+  <Step title="Open Cube for Reception">
+    Tap a cube to open its details in the Warehouse Reception Details screen.
+  </Step>
+  
+  <Step title="Scan and Verify Guides">
+    Use the scan box to verify each guide as it's physically received:
+    
+    1. Scan the guide barcode
+    2. The app validates it belongs to this cube
+    3. Visual and audio feedback confirms successful scan
+    4. Guide is marked as received
+    
+    <Note>
+      The app provides audio feedback for scan results - listen for success or error sounds.
+    </Note>
+  </Step>
+  
+  <Step title="Complete Reception">
+    Once all guides are verified, tap **"Completar Recepción"** (Complete Reception).
+    
+    The cube will:
+    - Change to **Downloaded** state
+    - Move to "Listo para Entrega" (Ready for Delivery)
+    - Be available for client dispatch
+  </Step>
+</Steps>
+
+## Step 7: Client Dispatch
+
+The final step is dispatching guides to clients:
+
+<Steps>
+  <Step title="Navigate to Client Dispatch">
+    From the drawer menu, select **"Despacho a Cliente"**.
+  </Step>
+  
+  <Step title="Select Cube">
+    Tap a cube in **Downloaded** state to view its details.
+  </Step>
+  
+  <Step title="Dispatch to Client">
+    Use the **"Despachar a Cliente"** button to:
+    - Mark guides as dispatched to client
+    - Update guide tracking states
+    - Close the cube if all guides are dispatched
+  </Step>
+</Steps>
+
+## Common Operations
+
+### Searching for Guides
+
+To find a specific guide:
+
+1. Use the **"Escáner de Guías"** screen from the drawer
+2. Scan or enter the guide package code
+3. View complete guide details including:
+   - Current state and location
+   - Associated transport cube (if any)
+   - History of state changes
+
+### Filtering by State
+
+On any screen with cube lists:
+
+- Use the **state filter** at the top to filter by specific state
+- Tap "All" to view all cubes regardless of state
+- The filter remembers your selection as you navigate
+
+### Refreshing Data
+
+To ensure you have the latest data:
+
+- **Pull down** on any list screen to refresh
+- The dashboard auto-refreshes when you return to it
+- Individual cube details refresh when opened
+
+## Troubleshooting Common Issues
+
+### Guide Won't Scan
+
+<Warning>
+  If a guide won't scan into a cube, check:
+  - The guide is in the correct state for the operation
+  - The guide isn't already in another cube
+  - The barcode is clear and readable
+  - You have network connectivity for validation
+</Warning>
+
+### Can't Change Cube State
+
+State transitions follow strict rules:
+
+- **Created** → **Sent**: Only if you have dispatch permissions
+- **Sent** → **Downloading**: Only at warehouse location
+- **Downloading** → **Downloaded**: Only when reception is complete
+- Invalid transitions will show an error message
+
+### Session Expired
+
+If you see "Session expired" errors:
+
+1. The app will attempt automatic token refresh
+2. If refresh fails, you'll be redirected to login
+3. Log in again with your credentials
+4. Your work in progress may be lost - save frequently
+
+<Info>
+  The app automatically refreshes your authentication token every 15 minutes to prevent session expiration during active use.
+</Info>
+
+## Best Practices
+
+### For Efficient Operations
+
+1. **Create Cubes by Route**: Group guides going to the same destination
+2. **Verify Before Sending**: Double-check guide counts before sending cubes to transit
+3. **Complete Reception Promptly**: Don't leave cubes in Downloading state longer than necessary
+4. **Use Audio Cues**: Enable device sound to hear scan success/failure feedback
+
+### For Data Accuracy
+
+1. **Scan, Don't Type**: Use barcode scanning instead of manual entry when possible
+2. **Verify Guide States**: Check guide state badges to ensure they're in the expected state
+3. **Review Before Confirming**: Always review guide lists before state changes
+4. **Report Discrepancies**: If a guide is in an unexpected state, report it immediately
+
+## Next Steps
+
+Now that you understand the basics:
+
+<CardGroup cols={2}>
+  <Card title="Explore Features" icon="compass">
+    Learn about advanced features like batch operations, guide validation, and history tracking.
+  </Card>
+  
+  <Card title="View API Reference" icon="code">
+    Understand the underlying API calls and data structures used by the app.
+  </Card>
+  
+  <Card title="Learn State Flow" icon="diagram-project">
+    Deep dive into the state transition rules and validation logic.
+  </Card>
+  
+  <Card title="Customize the App" icon="wrench">
+    If you're a developer, learn how to build and customize GBI Logistics.
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you encounter issues or have questions:
+
+- Check the API logs in the app for detailed error messages
+- Verify your network connectivity
+- Ensure your app is updated to the latest version
+- Contact your system administrator for access or permission issues
+
+<Note>
+  The app includes built-in logging at `lib/core/services/app_logger.dart` that records all API calls and errors for troubleshooting.
+</Note>
+
+---
+
+**Congratulations!** You've completed the quick start guide and are ready to use GBI Logistics for your daily operations.

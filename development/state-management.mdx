@@ -1,0 +1,671 @@
+---
+title: 'State Management'
+description: 'Provider-based state management implementation in GBI Logistics'
+---
+
+## Overview
+
+GBI Logistics uses the **Provider pattern** for state management, leveraging Flutter's built-in `ChangeNotifier` for reactive state updates. This approach provides a clean separation between UI and business logic while maintaining simplicity and performance.
+
+## Why Provider?
+
+### Advantages
+- ✅ **Official Flutter recommendation** - Well-documented and widely adopted
+- ✅ **Simple learning curve** - Minimal boilerplate compared to other solutions
+- ✅ **Excellent performance** - Selective widget rebuilding
+- ✅ **Strong typing** - Compile-time safety
+- ✅ **Testability** - Easy to unit test providers independently
+- ✅ **Dependency injection** - Built-in DI support
+
+## Provider Architecture
+
+### Provider Setup in main.dart
+
+The application root configures all providers using `MultiProvider`:
+
+```dart
+MultiProvider(
+  providers: [
+    ChangeNotifierProvider<AuthProvider>(
+      create: (_) => AuthProvider(authService),
+    ),
+    ChangeNotifierProvider<GuideProvider>(
+      create: (_) => GuideProvider(guideService),
+    ),
+    ChangeNotifierProvider<TransportCubeProvider>(
+      create: (_) => TransportCubeProvider(transportCubeService)..loadCubes(),
+    ),
+    Provider<GuideDetailsService>(
+      create: (_) => guideDetailsService,
+    ),
+    ChangeNotifierProvider<GuideValidationProvider>(
+      create: (_) => GuideValidationProvider(guideValidationService),
+    ),
+  ],
+  child: MaterialApp(...),
+)
+```
+
+**Key Points:**
+- `ChangeNotifierProvider` for stateful providers
+- `Provider` for services without state
+- Dependencies injected through constructors
+- Optional initialization (e.g., `..loadCubes()`)
+
+## Core Providers
+
+### AuthProvider
+
+**Purpose**: Manages authentication state, login/logout operations, and token refresh.
+
+**Location**: `lib/features/logistics/providers/auth_provider.dart`
+
+#### State Management
+
+```dart
+class AuthProvider extends ChangeNotifier {
+  final AuthService _authService;
+  final SecureCredentialsService _secureStorage;
+  
+  // Private state
+  bool _isLoading = false;
+  String? _error;
+  LoginResponse? _loginData;
+  bool _isAuthenticated = false;
+  
+  // Public getters
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  bool get isAuthenticated => _isAuthenticated;
+  LoginResponse? get loginData => _loginData;
+  DashboardData? get dashboardData => _loginData?.dashboardData;
+}
+```
+
+#### Key Operations
+
+**Login Flow:**
+
+```dart
+Future<bool> login(String username, String password) async {
+  try {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();  // Update UI to show loading
+    
+    final request = LoginRequest(
+      username: username,
+      password: password,
+    );
+    
+    final response = await _authService.login(request);
+    
+    if (response.isSuccessful && response.content != null) {
+      _loginData = response.content;
+      _isAuthenticated = true;
+      _error = null;
+      
+      // Save credentials for silent login
+      await _secureStorage.saveCredentials(username, password);
+      
+      notifyListeners();  // Update UI with success
+      return true;
+    } else {
+      _error = response.messageDetail;
+      notifyListeners();  // Update UI with error
+      return false;
+    }
+  } catch (e) {
+    _error = e.toString();
+    notifyListeners();
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();  // Clear loading state
+  }
+}
+```
+
+**Session Restoration:**
+
+```dart
+Future<void> _restoreSession() async {
+  try {
+    final loginData = await _authService.restoreSession();
+    if (loginData != null) {
+      _loginData = loginData;
+      _isAuthenticated = true;
+      notifyListeners();
+      
+      // Validate token is still valid
+      final isValid = await _authService.hasValidToken();
+      if (!isValid) {
+        // Attempt silent login with stored credentials
+        final saved = await _secureStorage.getCredentials();
+        if (saved['username'] != null && saved['password'] != null) {
+          await login(saved['username']!, saved['password']!);
+        }
+      }
+    }
+  } catch (e) {
+    await logout();
+  }
+}
+```
+
+**Best Practices:**
+- Always set `_isLoading` before async operations
+- Clear errors before new operations
+- Call `notifyListeners()` after state changes
+- Handle errors gracefully with user-friendly messages
+
+### GuideProvider
+
+**Purpose**: Manages guide listings, search, validation states, and dispatch operations.
+
+**Location**: `lib/features/logistics/providers/guide_provider.dart`
+
+#### State Management
+
+```dart
+class GuideProvider extends ChangeNotifier {
+  final GuideService _guideService;
+  
+  // Core state
+  bool _isLoading = false;
+  final ValueNotifier<String?> _errorNotifier = ValueNotifier<String?>(null);
+  bool _lastOperationSuccessful = false;
+  List<GuideInfo> _guides = [];
+  int _totalGuides = 0;
+  
+  // UI state (validated/dispatched guides)
+  final Map<String, String> _guideUiStates = {};
+  
+  // Selection state
+  String? _selectedEntityRole;
+  String? _selectedEntityIdentifier;
+  bool _selectorsLocked = false;
+  final Set<String> _selectedGuides = {};
+  
+  // Filter state
+  String _clientDispatchFilterState = 'ReceivedInLocalWarehouse';
+}
+```
+
+#### Key Operations
+
+**Load Guides with Pagination:**
+
+```dart
+Future<void> loadGuides({
+  required int page,
+  required int pageSize,
+  required String status,
+  String? guideCode,
+  bool hideValidated = false,
+  bool bypassLoadingGuard = false,
+}) async {
+  try {
+    // Prevent duplicate requests
+    if (_isLoading && !bypassLoadingGuard) return;
+    
+    _isLoading = true;
+    _errorNotifier.value = null;
+    _lastOperationSuccessful = false;
+    notifyListeners();
+    
+    final response = await _guideService.getGuidesPaginated(
+      page: page,
+      pageSize: pageSize,
+      status: status,
+      guideCode: guideCode,
+    );
+    
+    if (response.isSuccessful && response.content != null) {
+      _guides = response.content!.registers;
+      
+      // Filter out validated guides if requested
+      if (hideValidated) {
+        _guides = _guides.where((guide) {
+          final state = _guideUiStates[guide.code];
+          return state != 'validated' && state != 'dispatched';
+        }).toList();
+      }
+      
+      // Sort to prioritize certain states
+      _guides.sort((a, b) {
+        if (a.stateLabel == 'DispatchedFromCustomsWithOutCube') return -1;
+        if (b.stateLabel == 'DispatchedFromCustomsWithOutCube') return 1;
+        return 0;
+      });
+      
+      _totalGuides = response.content!.totalRegister;
+    } else {
+      _errorNotifier.value = response.messageDetail;
+    }
+  } catch (e) {
+    _errorNotifier.value = e.toString();
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+**Persistent UI State:**
+
+The provider uses `SharedPreferences` to persist guide states across app restarts:
+
+```dart
+Future<void> updateGuideUiState(String guideCode, String state) async {
+  final prefs = await SharedPreferences.getInstance();
+  final validatedGuides = Set<String>.from(
+    prefs.getStringList(_validatedGuidesKey) ?? [],
+  );
+  final dispatchedGuides = Set<String>.from(
+    prefs.getStringList(_dispatchedGuidesKey) ?? [],
+  );
+  
+  _guideUiStates[guideCode] = state;
+  
+  if (state == 'validated') {
+    validatedGuides.add(guideCode);
+    dispatchedGuides.remove(guideCode);
+  } else if (state == 'dispatched') {
+    dispatchedGuides.add(guideCode);
+    validatedGuides.remove(guideCode);
+  }
+  
+  await prefs.setStringList(_validatedGuidesKey, validatedGuides.toList());
+  await prefs.setStringList(_dispatchedGuidesKey, dispatchedGuides.toList());
+  
+  notifyListeners();
+}
+```
+
+**Best Practices:**
+- Use loading guards to prevent duplicate requests
+- Persist important UI state locally
+- Provide granular getters for specific state
+- Use `ValueNotifier` for frequently changing values
+
+### TransportCubeProvider
+
+**Purpose**: Manages transport cube listings, details, state transitions, and bulk operations.
+
+**Location**: `lib/features/logistics/providers/transport_cube_provider.dart`
+
+#### State Management
+
+```dart
+class TransportCubeProvider extends ChangeNotifier {
+  final TransportCubeService _service;
+  
+  // Core state
+  bool _isLoading = false;
+  String? _errorMessage;
+  String? _lastMessageDetail;
+  String _selectedState = TransportCubeState.created;
+  
+  // Data
+  List<TransportCubeInfoAPI> _cubes = [];
+  TransportCubeDetails? _selectedCubeDetails;
+  
+  // Selection
+  final Set<int> _selectedCubes = {};
+  
+  // Loading tracking for individual cubes
+  final Map<int, bool> _loadingDetails = {};
+}
+```
+
+#### Key Operations
+
+**Create Transport Cube:**
+
+```dart
+Future<ApiResponse<NewTransportCubeResponseGenericResponse>>
+createTransportCube(List<String> guides, CubeType type) async {
+  if (_isLoading) return ApiResponse.error(messageDetail: 'Operación en curso');
+  
+  try {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    
+    final previousIds = _cubes.map((c) => c.id).toSet();
+    final request = NewTransportCubeRequest(guides: guides, type: type);
+    final response = await _service.createTransportCube(request);
+    
+    if (response.isSuccessful && response.content?.code == 0) {
+      // Poll for the new cube to appear
+      const attempts = 3;
+      const delayMs = 600;
+      bool found = false;
+      
+      for (int i = 0; i < attempts; i++) {
+        await loadCubes(force: true);
+        final currentIds = _cubes.map((c) => c.id).toSet();
+        final diff = currentIds.difference(previousIds);
+        
+        if (diff.isNotEmpty) {
+          found = true;
+          _lastMessageDetail = 'Cubo creado con ID ${diff.first}';
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: delayMs));
+      }
+      
+      if (!found) {
+        _lastMessageDetail = 'Confirmado pero aún no aparece en la lista.';
+      }
+      
+      _errorMessage = null;
+      return response;
+    }
+    
+    _errorMessage = response.messageDetail;
+    return response;
+  } catch (e) {
+    _errorMessage = null;
+    return ApiResponse.error(messageDetail: null);
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+**Change Cube State:**
+
+```dart
+Future<bool> changeTransportCubeState(int cubeId, String newState) async {
+  if (_isLoading) return false;
+  
+  try {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+    
+    final request = ChangeTranportCubesStateRequest(
+      transportCubeIds: [cubeId],
+      newState: newState,
+    );
+    final response = await _service.changeTransportCubesState(request);
+    
+    if (response.isSuccessful) {
+      _errorMessage = null;
+      _lastMessageDetail = response.messageDetail;
+      await loadCubes();  // Refresh list
+      return true;
+    }
+    
+    _errorMessage = response.messageDetail;
+    return false;
+  } catch (_) {
+    _errorMessage = null;
+    return false;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+**Best Practices:**
+- Track loading state per-item for better UX
+- Refresh data after mutations
+- Use polling sparingly and with limits
+- Provide bulk operations for efficiency
+
+## State Flow and Updates
+
+### Reactive Update Pattern
+
+```
+┌─────────────┐
+│   Widget    │  Consumer<AuthProvider>(
+│             │    builder: (context, auth, child) {
+└──────┬──────┘      return auth.isLoading
+       │               ? LoadingWidget()
+       │               : ContentWidget();
+       │           }
+       │         )
+       ↓
+┌─────────────┐
+│  Provider   │  _isLoading = true;
+│             │  notifyListeners();  ← Triggers rebuild
+└──────┬──────┘
+       │
+       ↓
+┌─────────────┐
+│   Service   │  await _http.post(...);
+│             │  return ApiResponse(...);
+└─────────────┘
+```
+
+### Consumer Widget Pattern
+
+**Rebuild entire widget:**
+
+```dart
+Consumer<AuthProvider>(
+  builder: (context, auth, child) {
+    if (auth.isLoading) return LoadingWidget();
+    if (auth.error != null) return ErrorWidget(auth.error!);
+    return ContentWidget(user: auth.loginData!);
+  },
+)
+```
+
+**Rebuild specific part:**
+
+```dart
+Column(
+  children: [
+    StaticHeader(),  // Doesn't rebuild
+    Consumer<GuideProvider>(
+      builder: (context, guides, _) {
+        return Text('Total: ${guides.totalGuides}');
+      },
+    ),
+  ],
+)
+```
+
+### Provider.of Pattern
+
+**Listen to changes:**
+
+```dart
+final auth = Provider.of<AuthProvider>(context);
+if (auth.isAuthenticated) {
+  // Widget rebuilds when auth state changes
+}
+```
+
+**Don't listen (for callbacks):**
+
+```dart
+onPressed: () {
+  final auth = Provider.of<AuthProvider>(context, listen: false);
+  auth.logout();  // Don't rebuild just because we called this
+}
+```
+
+## Best Practices
+
+### DO ✅
+
+1. **Use private state with public getters:**
+```dart
+bool _isLoading = false;
+bool get isLoading => _isLoading;
+```
+
+2. **Always call notifyListeners after state changes:**
+```dart
+_isLoading = true;
+notifyListeners();
+```
+
+3. **Use try-catch-finally for async operations:**
+```dart
+try {
+  _isLoading = true;
+  notifyListeners();
+  // async operation
+} catch (e) {
+  _error = e.toString();
+} finally {
+  _isLoading = false;
+  notifyListeners();
+}
+```
+
+4. **Inject services through constructor:**
+```dart
+class AuthProvider extends ChangeNotifier {
+  final AuthService _authService;
+  AuthProvider(this._authService);
+}
+```
+
+5. **Use Consumer for selective rebuilds:**
+```dart
+Consumer<GuideProvider>(
+  builder: (context, guides, child) => Text('${guides.totalGuides}'),
+)
+```
+
+### DON'T ❌
+
+1. **Don't expose mutable state directly:**
+```dart
+// ❌ Bad
+List<Guide> guides = [];
+
+// ✅ Good
+List<Guide> _guides = [];
+List<Guide> get guides => List.unmodifiable(_guides);
+```
+
+2. **Don't call notifyListeners in getters:**
+```dart
+// ❌ Bad
+String? get error {
+  notifyListeners();  // Never do this!
+  return _error;
+}
+```
+
+3. **Don't use providers for static data:**
+```dart
+// ❌ Bad - Use regular Provider
+ChangeNotifierProvider<Config>(
+  create: (_) => Config(),
+)
+
+// ✅ Good
+Provider<Config>(
+  create: (_) => Config(),
+)
+```
+
+4. **Don't forget to dispose resources:**
+```dart
+@override
+void dispose() {
+  _errorNotifier.dispose();
+  super.dispose();
+}
+```
+
+## Testing Providers
+
+### Unit Test Example
+
+```dart
+void main() {
+  group('AuthProvider', () {
+    late MockAuthService mockAuthService;
+    late AuthProvider authProvider;
+    
+    setUp(() {
+      mockAuthService = MockAuthService();
+      authProvider = AuthProvider(mockAuthService);
+    });
+    
+    test('login success updates state correctly', () async {
+      // Arrange
+      when(mockAuthService.login(any))
+          .thenAnswer((_) async => ApiResponse.success(
+                content: LoginResponse(...),
+              ));
+      
+      // Act
+      final result = await authProvider.login('user', 'pass');
+      
+      // Assert
+      expect(result, true);
+      expect(authProvider.isAuthenticated, true);
+      expect(authProvider.error, null);
+    });
+  });
+}
+```
+
+## Performance Optimization
+
+### Loading Guards
+
+Prevent duplicate requests:
+
+```dart
+if (_isLoading) return;  // Guard against duplicate calls
+```
+
+### Selective Rebuilds
+
+Use `Consumer` instead of `Provider.of` at the root:
+
+```dart
+// ❌ Rebuilds entire screen
+Widget build(BuildContext context) {
+  final guides = Provider.of<GuideProvider>(context);
+  return Column(...);
+}
+
+// ✅ Rebuilds only the Text widget
+Widget build(BuildContext context) {
+  return Column(
+    children: [
+      StaticWidget(),
+      Consumer<GuideProvider>(
+        builder: (context, guides, _) => Text('${guides.totalGuides}'),
+      ),
+    ],
+  );
+}
+```
+
+### Debouncing
+
+For search or frequent updates:
+
+```dart
+Timer? _debounce;
+
+void onSearchChanged(String query) {
+  _debounce?.cancel();
+  _debounce = Timer(const Duration(milliseconds: 500), () {
+    _performSearch(query);
+  });
+}
+```
+
+## Next Steps
+
+- Explore [Design Patterns](/development/design-patterns) used alongside state management
+- Review [Project Structure](/development/project-structure) to see where providers fit
+- Check [Architecture Overview](/development/overview) for the bigger picture

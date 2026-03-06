@@ -1,0 +1,220 @@
+---
+title: "Cube Types"
+description: "Transport cube type definitions and conversion methods"
+---
+
+## Overview
+
+The `CubeType` enum defines the different types of transport cubes based on their purpose in the logistics flow.
+
+## Enum Values
+
+### TransitToWarehouse
+
+- **Value**: `"TransitToWarehouse"`
+- **Code**: `0`
+- **Description**: Cubes in transit from customs to warehouse
+
+### ToDispatchToSubcourier
+
+- **Value**: `"ToDispatchToSubcourier"`
+- **Code**: `1`
+- **Description**: Cubes ready for dispatch to a subcourier
+
+### ToDispatchToClient
+
+- **Value**: `"ToDispatchToClient"`
+- **Code**: `2`
+- **Description**: Cubes ready for direct dispatch to client
+
+### ToDispatchToCourier
+
+- **Value**: `"ToDispatchToCourier"`
+- **Code**: `3`
+- **Description**: Cubes ready for dispatch to another courier
+
+## Code Reference
+
+```dart
+enum CubeType {
+  transitToWarehouse('TransitToWarehouse'),
+  toDispatchToSubcourier('ToDispatchToSubcourier'),
+  toDispatchToClient('ToDispatchToClient'),
+  toDispatchToCourier('ToDispatchToCourier');
+
+  final String value;
+  const CubeType(this.value);
+
+  @override
+  String toString() => value;
+
+  static CubeType? fromString(String? value) {
+    if (value == null) return null;
+    return CubeType.values.firstWhere(
+      (type) => type.value == value,
+      orElse: () => CubeType.transitToWarehouse,
+    );
+  }
+
+  static CubeType? fromInt(int? code) {
+    if (code == null) return null;
+    switch (code) {
+      case 0:
+        return CubeType.transitToWarehouse;
+      case 1:
+        return CubeType.toDispatchToSubcourier;
+      case 2:
+        return CubeType.toDispatchToClient;
+      case 3:
+        return CubeType.toDispatchToCourier;
+      default:
+        return null;
+    }
+  }
+
+  static CubeType? fromDynamic(dynamic v) {
+    if (v == null) return null;
+    if (v is int) return fromInt(v);
+    if (v is String) {
+      final parsed = int.tryParse(v);
+      if (parsed != null) return fromInt(parsed);
+      return fromString(v);
+    }
+    return null;
+  }
+}
+```
+
+## Conversion Methods
+
+### fromString
+
+Converts a string value to `CubeType`.
+
+```dart
+final type = CubeType.fromString('ToDispatchToClient');
+print(type); // CubeType.toDispatchToClient
+```
+
+**Default**: Returns `transitToWarehouse` if the string doesn't match any type.
+
+### fromInt
+
+Converts an integer code to `CubeType`.
+
+```dart
+final type = CubeType.fromInt(2);
+print(type); // CubeType.toDispatchToClient
+```
+
+**Returns**: `null` if the code is invalid.
+
+### fromDynamic
+
+Flexible conversion from dynamic value (handles both int and string).
+
+```dart
+// From integer
+final type1 = CubeType.fromDynamic(1);
+print(type1); // CubeType.toDispatchToSubcourier
+
+// From string name
+final type2 = CubeType.fromDynamic('ToDispatchToCourier');
+print(type2); // CubeType.toDispatchToCourier
+
+// From numeric string
+final type3 = CubeType.fromDynamic('0');
+print(type3); // CubeType.transitToWarehouse
+```
+
+**Returns**: `null` if the value cannot be converted.
+
+## Usage Examples
+
+### Parsing API Response
+
+```dart
+factory TransportCubeInfo.fromJson(Map<String, dynamic> json) {
+  return TransportCubeInfo(
+    id: json['id'] as int,
+    type: CubeType.fromDynamic(json['type']) ?? CubeType.transitToWarehouse,
+    // ... other fields
+  );
+}
+```
+
+### Display Type Label
+
+```dart
+String getTypeLabel(CubeType type) {
+  switch (type) {
+    case CubeType.transitToWarehouse:
+      return 'Tránsito a Bodega';
+    case CubeType.toDispatchToSubcourier:
+      return 'Despacho a Subcourier';
+    case CubeType.toDispatchToClient:
+      return 'Despacho a Cliente';
+    case CubeType.toDispatchToCourier:
+      return 'Despacho a Courier';
+  }
+}
+```
+
+### Filter by Type
+
+```dart
+List<TransportCubeInfo> getClientDispatchCubes(List<TransportCubeInfo> cubes) {
+  return cubes.where(
+    (cube) => cube.type == CubeType.toDispatchToClient
+  ).toList();
+}
+```
+
+### Convert to String
+
+```dart
+final type = CubeType.toDispatchToSubcourier;
+print(type.toString()); // "ToDispatchToSubcourier"
+print(type.value); // "ToDispatchToSubcourier"
+```
+
+## Type Workflow
+
+Typical cube type progression:
+
+```
+TransitToWarehouse → ToDispatchToSubcourier / ToDispatchToClient / ToDispatchToCourier
+```
+
+1. **TransitToWarehouse**: Initial type when cube arrives from customs
+2. **ToDispatchTo...**: Final dispatch type based on destination
+
+## API Integration
+
+The API can send cube types as either integers or strings:
+
+```json
+{
+  "id": 123,
+  "type": 2,
+  "typeLabel": "Despacho a Cliente"
+}
+```
+
+Or:
+
+```json
+{
+  "id": 123,
+  "type": "ToDispatchToClient",
+  "typeLabel": "Despacho a Cliente"
+}
+```
+
+Both formats are handled by `fromDynamic()`.
+
+## Related
+
+- [Transport Cube Models](/models/transport-cube) - Cube data structures
+- [Cube States](/models/cube-states) - Cube lifecycle states
+- [TransportCubeService](/services/transport-cube-service) - Service for cube operations

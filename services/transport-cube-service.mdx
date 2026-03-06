@@ -1,0 +1,413 @@
+---
+title: "TransportCubeService"
+description: "Service for transport cube operations and management"
+---
+
+## Overview
+
+The `TransportCubeService` class provides methods for managing transport cubes, including creation, retrieval, state changes, and dispatch operations.
+
+## Class Definition
+
+```dart
+class TransportCubeService {
+  final HttpService _http;
+
+  TransportCubeService(this._http);
+}
+```
+
+## Core Methods
+
+### createTransportCube
+
+Creates a new transport cube with specified guides.
+
+```dart
+Future<ApiResponse<NewTransportCubeResponseGenericResponse>> createTransportCube(
+  NewTransportCubeRequest request
+)
+```
+
+**Example:**
+
+```dart
+final request = NewTransportCubeRequest(
+  guides: ['PKG001', 'PKG002', 'PKG003'],
+  type: CubeType.transitToWarehouse,
+);
+
+final response = await transportCubeService.createTransportCube(request);
+
+if (response.isSuccessful && response.content?.content != null) {
+  final cube = response.content!.content!;
+  print('Cube created: ID ${cube.id}');
+  print('Label: ${cube.transportCubeLabelId}');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**What it does:**
+1. Sends request to create cube with guides
+2. Logs the operation
+3. Returns cube ID and label on success
+
+### getTransportCubes
+
+Retrieves a paginated list of transport cubes filtered by state.
+
+```dart
+Future<ApiResponse<GetTransportCubesPaginatedResponse>> getTransportCubes({
+  required int page,
+  required int itemsPerPage,
+  required String state,
+})
+```
+
+**Example:**
+
+```dart
+final response = await transportCubeService.getTransportCubes(
+  page: 1,
+  itemsPerPage: 20,
+  state: TransportCubeState.sent,
+);
+
+if (response.isSuccessful && response.content?.content != null) {
+  final cubes = response.content!.content!;
+  print('Total cubes: ${response.content!.totalItems}');
+  
+  for (final cube in cubes) {
+    print('Cube #${cube.id}: ${cube.stateLabel} (${cube.guides} guides)');
+  }
+}
+```
+
+**Parameters:**
+- `page` - Page number (1-based)
+- `itemsPerPage` - Items per page
+- `state` - Filter by state (use `TransportCubeState` constants)
+
+### getTransportCubeDetails
+
+Retrieves complete details of a specific cube including all guides.
+
+```dart
+Future<ApiResponse<TransportCubeDetails>> getTransportCubeDetails(
+  int cubeId, {
+  bool suppressAuthHandling = false,
+})
+```
+
+**Example:**
+
+```dart
+final response = await transportCubeService.getTransportCubeDetails(123);
+
+if (response.isSuccessful && response.content != null) {
+  final details = response.content!;
+  final cube = details.transportCube;
+  
+  print('Cube #${cube.id}');
+  print('State: ${cube.stateLabel}');
+  print('Type: ${cube.typeLabel}');
+  print('Operator: ${cube.operatorName}');
+  print('Guides (${details.guides.length}):');
+  
+  for (final guide in details.guides) {
+    print('  - ${guide.packageCode}: ${guide.stateLabel}');
+  }
+}
+```
+
+**Returns:**
+- `TransportCubeDetails` with cube info and list of guides
+
+### changeTransportCubesState
+
+Changes the state of one or more transport cubes.
+
+```dart
+Future<ApiResponse<void>> changeTransportCubesState(
+  ChangeTranportCubesStateRequest request,
+)
+```
+
+**Example:**
+
+```dart
+final request = ChangeTranportCubesStateRequest(
+  transportCubeIds: [123, 456, 789],
+  newState: TransportCubeState.sent,
+);
+
+final response = await transportCubeService.changeTransportCubesState(request);
+
+if (response.isSuccessful) {
+  print('Successfully changed state to Sent');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**State Transitions:**
+- `Created` → `Sent`
+- `Sent` → `Downloading`
+- `Downloading` → `Downloaded`
+
+### closeTransportCubes
+
+Closes one or more transport cubes.
+
+```dart
+Future<ApiResponse<GenericOperationResponseGenericResponse>> closeTransportCubes(
+  List<int> cubeIds
+)
+```
+
+**Example:**
+
+```dart
+final response = await transportCubeService.closeTransportCubes([123, 456]);
+
+if (response.isSuccessful) {
+  print('Cubes closed successfully');
+  if (response.content?.content != null) {
+    final result = response.content!.content!;
+    print('Success: ${result.successCount}');
+    print('Failed: ${result.failedCount}');
+  }
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**Note:** Only cubes with `allowClose = true` can be closed.
+
+### dispatchCubeToClient
+
+Dispatches one or more cubes to a client.
+
+```dart
+Future<ApiResponse<GenericOperationResponseGenericResponse>> dispatchCubeToClient(
+  List<int> cubeIds
+)
+```
+
+**Example:**
+
+```dart
+final response = await transportCubeService.dispatchCubeToClient([123]);
+
+if (response.isSuccessful) {
+  print('Cube dispatched to client');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+### moveGuideBetweenCubes
+
+Moves a guide from one cube to another.
+
+```dart
+Future<ApiResponse<void>> moveGuideBetweenCubes(
+  ChangeCubeGuideRequest request,
+)
+```
+
+**Example:**
+
+```dart
+final request = ChangeCubeGuideRequest(
+  guideCode: 'PKG001',
+  fromCubeId: 123,
+  toCubeId: 456,
+);
+
+final response = await transportCubeService.moveGuideBetweenCubes(request);
+
+if (response.isSuccessful) {
+  print('Guide moved successfully');
+}
+```
+
+### getCubeHistory
+
+Retrieves the history of state changes for a cube.
+
+```dart
+Future<ApiResponse<List<String>>> getCubeHistory(int cubeId)
+```
+
+**Example:**
+
+```dart
+final response = await transportCubeService.getCubeHistory(123);
+
+if (response.isSuccessful && response.content != null) {
+  print('Cube history:');
+  for (final entry in response.content!) {
+    print('  - $entry');
+  }
+}
+```
+
+### verifyTransportCubeScan
+
+Verifies a scanned cube or guide barcode.
+
+```dart
+Future<ApiResponse<void>> verifyTransportCubeScan(
+  TransportCubeScanRequest request
+)
+```
+
+**Example:**
+
+```dart
+final request = TransportCubeScanRequest(
+  cubeId: 123,
+  scannedCode: 'CUBE-123-456',
+);
+
+final response = await transportCubeService.verifyTransportCubeScan(request);
+
+if (response.isSuccessful) {
+  print('Scan verified');
+} else {
+  print('Invalid scan: ${response.messageDetail}');
+}
+```
+
+## Complete Usage Example
+
+```dart
+class CubeManagementScreen extends StatefulWidget {
+  @override
+  _CubeManagementScreenState createState() => _CubeManagementScreenState();
+}
+
+class _CubeManagementScreenState extends State<CubeManagementScreen> {
+  final TransportCubeService _cubeService = TransportCubeService(httpService);
+  List<TransportCubeInfo> _cubes = [];
+  String _currentState = TransportCubeState.created;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadCubes();
+  }
+  
+  Future<void> _loadCubes() async {
+    final response = await _cubeService.getTransportCubes(
+      page: 1,
+      itemsPerPage: 50,
+      state: _currentState,
+    );
+    
+    if (response.isSuccessful && response.content?.content != null) {
+      setState(() {
+        _cubes = response.content!.content!;
+      });
+    }
+  }
+  
+  Future<void> _createCube(List<String> guideCodes) async {
+    final request = NewTransportCubeRequest(
+      guides: guideCodes,
+      type: CubeType.transitToWarehouse,
+    );
+    
+    final response = await _cubeService.createTransportCube(request);
+    
+    if (response.isSuccessful) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cube created successfully')),
+      );
+      _loadCubes();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${response.messageDetail}')),
+      );
+    }
+  }
+  
+  Future<void> _changeState(List<int> cubeIds, String newState) async {
+    final request = ChangeTranportCubesStateRequest(
+      transportCubeIds: cubeIds,
+      newState: newState,
+    );
+    
+    final response = await _cubeService.changeTransportCubesState(request);
+    
+    if (response.isSuccessful) {
+      _loadCubes();
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text('Transport Cubes')),
+      body: ListView.builder(
+        itemCount: _cubes.length,
+        itemBuilder: (context, index) {
+          final cube = _cubes[index];
+          return ListTile(
+            title: Text('Cube #${cube.id}'),
+            subtitle: Text('${cube.guides} guides - ${cube.stateLabel}'),
+            trailing: Icon(
+              TransportCubeState.getIcon(cube.state),
+              color: Color(TransportCubeState.getColor(cube.state)),
+            ),
+            onTap: () => _viewCubeDetails(cube.id),
+          );
+        },
+      ),
+    );
+  }
+}
+```
+
+## Logging
+
+All operations are automatically logged:
+
+```dart
+// Logged on cube creation
+AppLogger.log(
+  'POST /api/v1.0/Guide/new-transport-cube\nRequest:\n...',
+  source: 'TransportCubeService'
+);
+
+// Logged on success
+AppLogger.log(
+  'Transport cube created successfully - id: 123, Label: CUBE-123',
+  source: 'TransportCubeService',
+  type: 'SUCCESS'
+);
+
+// Logged on error
+AppLogger.error(
+  'Failed to create transport cube:\nError message',
+  source: 'TransportCubeService'
+);
+```
+
+## Best Practices
+
+1. **Check allowClose before closing** - Verify `cube.allowClose` is `true`
+2. **Handle pagination** - Use `totalItems` and `totalPages` from response
+3. **Validate state transitions** - Only transition to valid next states
+4. **Check response success** - Always verify `isSuccessful` before accessing content
+5. **Handle errors gracefully** - Display `messageDetail` to users
+6. **Refresh after operations** - Reload data after create/update/delete
+
+## Related
+
+- [Transport Cube Models](/models/transport-cube) - Data structures
+- [Cube States](/models/cube-states) - Available states
+- [Cube Types](/models/cube-types) - Cube type definitions
+- [HttpService](/services/http-service) - Underlying HTTP service

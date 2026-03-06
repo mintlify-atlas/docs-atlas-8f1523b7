@@ -1,0 +1,347 @@
+---
+title: Authentication
+description: Authentication and token management endpoints
+---
+
+## Overview
+
+The GBI Logistics API uses JWT (JSON Web Token) Bearer authentication. All endpoints except `/Auth/login` require a valid token in the Authorization header.
+
+## Login
+
+Authenticate a user and receive a JWT token.
+
+```http
+POST /api/v1.0/Auth/login
+```
+
+### Request Body
+
+<ParamField body="username" type="string" required>
+  User's login username
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "username": "operator@gbilogistics.com",
+  "password": "your_password"
+}
+```
+
+### Response
+
+<ResponseField name="content" type="object">
+  Login response data
+</ResponseField>
+
+<Expandable title="content properties">
+  <ResponseField name="token" type="string">
+    JWT Bearer token for subsequent API requests
+  </ResponseField>
+
+  <ResponseField name="personFirstName" type="string">
+    Authenticated user's first name
+  </ResponseField>
+
+  <ResponseField name="personLastName" type="string">
+    Authenticated user's last name
+  </ResponseField>
+
+  <ResponseField name="entityName" type="string">
+    Name of the entity/organization
+  </ResponseField>
+
+  <ResponseField name="courierImageUrl" type="string">
+    URL to the courier's logo or image
+  </ResponseField>
+
+  <ResponseField name="dashboardData" type="object">
+    Dashboard statistics for the user
+  </ResponseField>
+
+  <Expandable title="dashboardData properties">
+    <ResponseField name="guideStadistics" type="array">
+      Array of guide statistics by state
+    </ResponseField>
+
+    <Expandable title="guideStadistics item">
+      <ResponseField name="status" type="string">
+        Guide status code (e.g., "ReadyForDelivery", "InLocalDistribution")
+      </ResponseField>
+
+      <ResponseField name="count" type="integer">
+        Number of guides in this status
+      </ResponseField>
+    </Expandable>
+  </Expandable>
+
+  <ResponseField name="dispatchRoleTypesAllowed" type="object">
+    Roles this user is allowed to dispatch to
+  </ResponseField>
+
+  <Expandable title="dispatchRoleTypesAllowed properties">
+    <ResponseField name="Courier" type="string">
+      Courier role identifier if allowed
+    </ResponseField>
+
+    <ResponseField name="Subcourier" type="string">
+      Subcourier role identifier if allowed
+    </ResponseField>
+
+    <ResponseField name="FinalClient" type="string">
+      Final client role identifier if allowed
+    </ResponseField>
+  </Expandable>
+</Expandable>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Login successful",
+  "messageDetail": null,
+  "content": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "personFirstName": "Juan",
+    "personLastName": "Pérez",
+    "entityName": "GBI Logistics",
+    "courierImageUrl": "https://example.com/logo.png",
+    "dashboardData": {
+      "guideStadistics": [
+        {
+          "status": "ReadyForDelivery",
+          "count": 45
+        },
+        {
+          "status": "InLocalDistribution",
+          "count": 23
+        }
+      ]
+    },
+    "dispatchRoleTypesAllowed": {
+      "Courier": "Courier",
+      "Subcourier": "Subcourier",
+      "FinalClient": null
+    }
+  }
+}
+```
+
+### Error Response
+
+```json
+{
+  "code": -1,
+  "responseType": "Error",
+  "message": null,
+  "messageDetail": "Invalid username or password",
+  "content": null
+}
+```
+
+## Refresh Token
+
+Refresh an existing JWT token to extend the session.
+
+```http
+POST /api/v1.0/Auth/refresh-token
+```
+
+### Request Body
+
+<ParamField body="token" type="string" required>
+  The current JWT token to refresh
+</ParamField>
+
+### Request Example
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Response
+
+Returns the same structure as the login endpoint with a new token.
+
+<ResponseField name="content.token" type="string">
+  New JWT Bearer token
+</ResponseField>
+
+### Response Example
+
+```json
+{
+  "code": 0,
+  "responseType": "Success",
+  "message": "Token refreshed",
+  "messageDetail": null,
+  "content": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.new_token...",
+    "personFirstName": "Juan",
+    "personLastName": "Pérez",
+    "entityName": "GBI Logistics",
+    "courierImageUrl": "https://example.com/logo.png",
+    "dashboardData": {
+      "guideStadistics": [...]
+    },
+    "dispatchRoleTypesAllowed": {...}
+  }
+}
+```
+
+## Token Usage
+
+Once you have a token, include it in the Authorization header for all subsequent requests:
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### Flutter/Dart Example
+
+```dart
+import 'package:gbi_logistics/core/config/api_config.dart';
+import 'package:gbi_logistics/features/logistics/models/auth_models.dart';
+import 'package:gbi_logistics/features/logistics/services/auth_service.dart';
+
+// Login
+final loginRequest = LoginRequest(
+  username: 'operator@gbilogistics.com',
+  password: 'your_password',
+);
+
+final response = await authService.login(loginRequest);
+
+if (response.isSuccessful && response.content?.token != null) {
+  final token = response.content!.token!;
+  // Token is automatically stored and used for subsequent requests
+  print('Logged in as: ${response.content!.personFirstName}');
+} else {
+  print('Login failed: ${response.messageDetail}');
+}
+```
+
+## Token Management
+
+<Note>
+  The client automatically manages token lifecycle:
+  - Tokens are checked every **15 minutes**
+  - Tokens are refreshed **30 minutes before expiration**
+  - If refresh fails, the client attempts silent re-login with saved credentials
+</Note>
+
+### Token Refresh Strategy
+
+The `AuthService` implements automatic token refresh:
+
+```dart
+// Check if token needs refresh
+final needsRefresh = await authService.refreshTokenIfNeeded();
+
+if (needsRefresh) {
+  // Token was refreshed or is still valid
+} else {
+  // Token refresh failed, user needs to log in again
+  await authService.logout();
+}
+```
+
+### Token Validation
+
+You can validate a token by checking if it's still valid:
+
+```dart
+final isValid = await authService.hasValidToken();
+
+if (!isValid) {
+  // Redirect to login
+}
+```
+
+This makes a test request to the dashboard endpoint to verify the token.
+
+## Session Management
+
+### Restore Session
+
+The app can restore a previous session if the user didn't explicitly log out:
+
+```dart
+final loginData = await authService.restoreSession();
+
+if (loginData != null) {
+  // Session restored, user is logged in
+  print('Welcome back, ${loginData.personFirstName}!');
+} else {
+  // No active session, show login screen
+}
+```
+
+### Logout
+
+To end a session:
+
+```dart
+await authService.logout();
+// Token is cleared from storage
+// User is redirected to login screen
+```
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="Invalid Credentials">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Invalid username or password"
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="Expired Token">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Token has expired"
+    }
+    ```
+    **Solution**: Use the refresh token endpoint or re-login
+  </Accordion>
+
+  <Accordion title="Invalid Token Format">
+    ```json
+    {
+      "code": -1,
+      "messageDetail": "Invalid token format"
+    }
+    ```
+    **Solution**: Ensure the token is properly formatted with "Bearer " prefix
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+<Warning>
+  - **Never** log or expose tokens in production
+  - Store tokens securely using Flutter's `flutter_secure_storage`
+  - Clear tokens immediately on logout
+  - Implement token rotation on refresh
+</Warning>
+
+<Info>
+  The app stores credentials securely to enable silent re-login:
+  - Tokens are stored in secure storage
+  - Credentials are encrypted at rest
+  - Session state is tracked separately from token storage
+</Info>

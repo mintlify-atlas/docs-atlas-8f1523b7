@@ -1,0 +1,678 @@
+---
+title: 'Authentication'
+description: 'Token-based authentication, session management, and security in GBI Logistics'
+icon: 'shield-halved'
+---
+
+## Overview
+
+GBI Logistics implements a robust token-based authentication system with automatic session management, token refresh, and secure credential storage. The system ensures secure access to the logistics platform while providing a seamless user experience.
+
+## Authentication Architecture
+
+The authentication system consists of several key components:
+
+<CardGroup cols={3}>
+  <Card title="AuthService" icon="gear">
+    Core authentication logic and API calls
+  </Card>
+  
+  <Card title="StorageService" icon="database">
+    Persistent session and token storage
+  </Card>
+  
+  <Card title="SecureCredentialsService" icon="lock">
+    Encrypted credential storage for silent login
+  </Card>
+</CardGroup>
+
+## Login Process
+
+### Login Request Model
+
+The login process starts with a simple username/password request:
+
+```dart lib/features/logistics/models/auth_models.dart
+class LoginRequest {
+  final String username;
+  final String password;
+
+  const LoginRequest({
+    required this.username,
+    required this.password,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'username': username,
+    'password': password,
+  };
+}
+```
+
+### Login Response Model
+
+Successful login returns comprehensive user and session data:
+
+```dart lib/features/logistics/models/auth_models.dart
+class LoginResponse {
+  final String? token;                  // JWT authentication token
+  final String? personFirstName;        // User's first name
+  final String? personLastName;         // User's last name
+  final String? entityName;             // Company/entity name
+  final String? courierImageUrl;        // Courier logo URL
+  final DashboardData dashboardData;    // Dashboard statistics
+  final DispatchRoleTypesAllowed dispatchRoleTypesAllowed; // User permissions
+
+  const LoginResponse({
+    this.token,
+    this.personFirstName,
+    this.personLastName,
+    this.entityName,
+    this.courierImageUrl,
+    required this.dashboardData,
+    required this.dispatchRoleTypesAllowed,
+  });
+}
+```
+
+### Dashboard Data
+
+Login response includes real-time guide statistics:
+
+```dart Dashboard Statistics Model
+class DashboardData {
+  final List<GuideStateStatistics> guideStadistics;
+
+  const DashboardData({
+    required this.guideStadistics,
+  });
+}
+
+class GuideStateStatistics {
+  final String? status;  // Guide state (e.g., "InWarehouse", "Delivered")
+  final int count;       // Number of guides in this state
+
+  const GuideStateStatistics({
+    this.status,
+    required this.count,
+  });
+}
+```
+
+### Dispatch Role Permissions
+
+Users have role-based dispatch permissions:
+
+```dart Role-Based Permissions
+class DispatchRoleTypesAllowed {
+  final String? courier;       // Can dispatch to couriers
+  final String? subcourier;    // Can dispatch to subcouriers
+  final String? finalClient;   // Can dispatch to final clients
+
+  const DispatchRoleTypesAllowed({
+    this.courier,
+    this.subcourier,
+    this.finalClient,
+  });
+}
+```
+
+## Authentication Service Implementation
+
+The `AuthService` handles all authentication operations:
+
+```dart lib/features/logistics/services/auth_service.dart
+class AuthService {
+  final HttpService _http;
+  final StorageService _storage;
+  final SecureCredentialsService _secureStorage;
+
+  AuthService(this._http, this._storage, this._secureStorage) {
+    _restoreToken();
+  }
+
+  /// Restores token from storage on initialization
+  Future<void> _restoreToken() async {
+    final token = await _storage.getToken();
+    if (token != null) {
+      _http.setToken(token);
+    }
+  }
+
+  /// Performs login with username and password
+  Future<ApiResponse<LoginResponse>> login(LoginRequest request) async {
+    try {
+      final response = await _http.post<LoginResponse>(
+        ApiEndpoints.login,
+        request.toJson(),
+        (json) => LoginResponse.fromJson(json),
+      );
+
+      if (response.isSuccessful && response.content?.token != null) {
+        final token = response.content!.token!;
+        final loginData = response.content!;
+        
+        // Save token and session data
+        _http.setToken(token);
+        await _storage.setToken(token);
+        await _storage.setLoginData(loginData.toJson());
+      } else if (!response.isSuccessful) {
+        return ApiResponse.error(
+          messageDetail: response.messageDetail,
+          content: LoginResponse.empty(),
+        );
+      }
+
+      return response;
+    } catch (e) {
+      return ApiResponse.error(
+        messageDetail: null,
+        content: LoginResponse.empty(),
+      );
+    }
+  }
+
+  /// Logs out and clears session
+  Future<void> logout() async {
+    _http.setToken(null);
+    await _storage.clearSession();
+  }
+
+  /// Checks if token is still valid
+  Future<bool> hasValidToken() async {
+    final token = await _storage.getToken();
+    if (token == null) return false;
+
+    // Validate token by calling dashboard endpoint
+    final response = await _http.get<dynamic>(
+      ApiEndpoints.dashboardData,
+      (json) => json['content'],
+      queryParams: {'version': ApiConfig.version},
+      suppressAuthHandling: true,
+    );
+
+    return response.isSuccessful;
+  }
+}
+```
+
+### Login Flow Example
+
+```dart Performing Login
+// Create login request
+final request = LoginRequest(
+  username: 'operator@gbi.com',
+  password: 'secure_password',
+);
+
+// Attempt login
+final response = await authService.login(request);
+
+if (response.isSuccessful) {
+  final user = response.content!;
+  
+  print('Welcome, ${user.personFirstName} ${user.personLastName}!');
+  print('Entity: ${user.entityName}');
+  print('Token: ${user.token}');
+  
+  // Navigate to dashboard
+  navigateToDashboard(user.dashboardData);
+} else {
+  // Show error message
+  showError(response.messageDetail ?? 'Login failed');
+}
+```
+
+## Session Management
+
+The `StorageService` manages persistent session data:
+
+```dart lib/core/services/storage_service.dart
+class StorageService {
+  final _prefs = SharedPreferences.getInstance();
+  
+  static const _tokenKey = 'auth_token';
+  static const _tokenExpiryKey = 'auth_token_expiry';
+  static const _loginDataKey = 'auth_login_data';
+  static const _sessionKey = 'session_active';
+
+  /// Saves authentication token
+  Future<void> setToken(String token) async {
+    // Assumes JWT has 1 hour duration
+    final expiresAt = DateTime.now().add(const Duration(hours: 1));
+    await setTokenWithExpiry(token, expiresAt);
+  }
+
+  /// Saves token with expiration timestamp
+  Future<void> setTokenWithExpiry(String token, DateTime expiresAt) async {
+    final prefs = await _prefs;
+    await prefs.setString(_tokenKey, token);
+    await prefs.setString(_tokenExpiryKey, expiresAt.toIso8601String());
+  }
+
+  /// Retrieves stored token
+  Future<String?> getToken() async {
+    final prefs = await _prefs;
+    return prefs.getString(_tokenKey);
+  }
+
+  /// Gets token with expiration data
+  Future<TokenData?> getTokenData() async {
+    final prefs = await _prefs;
+    final token = await getToken();
+    final expiryStr = prefs.getString(_tokenExpiryKey);
+    
+    if (token == null || expiryStr == null) return null;
+    
+    return TokenData(
+      token: token,
+      expiresAt: DateTime.parse(expiryStr),
+    );
+  }
+
+  /// Checks if active session exists
+  Future<bool> hasActiveSession() async {
+    final prefs = await _prefs;
+    return prefs.getBool(_sessionKey) ?? false;
+  }
+
+  /// Saves complete login data
+  Future<void> setLoginData(Map<String, dynamic> loginData) async {
+    final prefs = await _prefs;
+    await Future.wait([
+      prefs.setString(_loginDataKey, jsonEncode(loginData)),
+      prefs.setBool(_sessionKey, true),
+    ]);
+  }
+
+  /// Retrieves stored login data
+  Future<Map<String, dynamic>?> getLoginData() async {
+    final prefs = await _prefs;
+    final data = prefs.getString(_loginDataKey);
+    if (data == null) return null;
+    return jsonDecode(data) as Map<String, dynamic>;
+  }
+
+  /// Clears all session data
+  Future<void> clearSession() async {
+    final prefs = await _prefs;
+    await Future.wait([
+      prefs.remove(_tokenKey),
+      prefs.remove(_tokenExpiryKey),
+      prefs.remove(_loginDataKey),
+      prefs.remove(_sessionKey),
+    ]);
+  }
+}
+```
+
+## Token Refresh Mechanism
+
+GBI Logistics implements automatic token refresh to maintain seamless sessions:
+
+```dart lib/features/logistics/services/auth_service.dart
+class AuthService {
+  bool _isRefreshing = false;
+
+  /// Refreshes token before expiration
+  Future<bool> refreshTokenIfNeeded() async {
+    // Prevent concurrent refresh attempts
+    if (_isRefreshing) {
+      return true;
+    }
+
+    try {
+      _isRefreshing = true;
+      
+      // Check for active session
+      final hasSession = await _storage.hasActiveSession();
+      if (!hasSession) return false;
+
+      // Get token expiration data
+      final tokenData = await _storage.getTokenData();
+      if (tokenData == null) return false;
+
+      final expiresAt = tokenData.expiresAt;
+      final now = DateTime.now();
+
+      // If token has sufficient time remaining, no refresh needed
+      if (expiresAt.difference(now) > ApiConfig.refreshTokenBeforeExpiry) {
+        return true;
+      }
+
+      // Attempt silent login with saved credentials
+      final saved = await _secureStorage.getCredentials();
+      final username = saved['username'];
+      final password = saved['password'];
+      
+      if (username != null && password != null) {
+        final loginRequest = LoginRequest(
+          username: username, 
+          password: password
+        );
+        final loginResponse = await login(loginRequest);
+        if (loginResponse.isSuccessful) {
+          return true;
+        }
+      }
+
+      // Fallback: Use refresh token endpoint
+      final response = await _http.post<LoginResponse>(
+        ApiEndpoints.refreshToken,
+        {'token': tokenData.token},
+        (json) => LoginResponse.fromJson(json),
+        suppressAuthHandling: true,
+      );
+
+      if (response.isSuccessful && response.content?.token != null) {
+        final newToken = response.content!.token!;
+        _http.setToken(newToken);
+        await _storage.setToken(newToken);
+        
+        // Update login data if available
+        if (response.content != null) {
+          await _storage.setLoginData(response.content!.toJson());
+        }
+        
+        return true;
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+}
+```
+
+### Refresh Strategy
+
+The system uses a multi-tier refresh strategy:
+
+<Steps>
+  <Step title="Check Token Expiration">
+    Verify if token is nearing expiration based on `ApiConfig.refreshTokenBeforeExpiry`
+  </Step>
+  
+  <Step title="Silent Login (Preferred)">
+    Attempt automatic re-login using securely stored credentials
+  </Step>
+  
+  <Step title="Refresh Token Endpoint (Fallback)">
+    If silent login fails, call dedicated refresh token API
+  </Step>
+  
+  <Step title="Update Session">
+    Save new token and update all session data
+  </Step>
+</Steps>
+
+<Note>
+  Token refresh happens automatically before the token expires, ensuring uninterrupted user sessions.
+</Note>
+
+## Session Restoration
+
+The app can restore sessions when reopened:
+
+```dart Session Restoration
+/// Restores previous session if available
+Future<LoginResponse?> restoreSession() async {
+  final hasSession = await _storage.hasActiveSession();
+  final token = await _storage.getToken();
+  final loginData = await _storage.getLoginData();
+  
+  // Only restore if user didn't explicitly logout
+  if (hasSession && token != null) {
+    _http.setToken(token);
+    
+    if (loginData != null) {
+      return LoginResponse.fromJson(loginData);
+    }
+  }
+  return null;
+}
+```
+
+### App Initialization Flow
+
+```dart Application Startup
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize services
+  final authService = AuthService(httpService, storageService, secureStorage);
+  
+  // Attempt session restoration
+  final session = await authService.restoreSession();
+  
+  runApp(MyApp(
+    initialRoute: session != null ? '/dashboard' : '/login',
+    sessionData: session,
+  ));
+}
+```
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Token Storage">
+    - Tokens are stored in SharedPreferences (encrypted by OS on iOS/Android)
+    - Sensitive credentials use SecureCredentialsService (iOS Keychain / Android Keystore)
+    - Session data is cleared on explicit logout
+    - Token expiration is tracked to prevent stale tokens
+  </Accordion>
+  
+  <Accordion title="Credential Handling">
+    ```dart
+    // NEVER store passwords in plain text
+    // Use SecureCredentialsService for credentials
+    await secureStorage.saveCredentials(
+      username: username,
+      password: password, // Encrypted by platform
+    );
+    
+    // Retrieve when needed for silent login
+    final credentials = await secureStorage.getCredentials();
+    ```
+  </Accordion>
+  
+  <Accordion title="Token Validation">
+    - Always validate tokens before critical operations
+    - Check token expiration proactively
+    - Handle 401 Unauthorized responses gracefully
+    
+    ```dart
+    if (!await authService.hasValidToken()) {
+      // Token invalid or expired
+      await authService.logout();
+      navigateToLogin();
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="HTTPS Communication">
+    - All API calls use HTTPS
+    - Certificate pinning can be implemented for additional security
+    - Never send tokens over unencrypted connections
+  </Accordion>
+  
+  <Accordion title="Session Timeout">
+    ```dart
+    // Implement automatic logout after inactivity
+    class SessionManager {
+      Timer? _inactivityTimer;
+      static const _timeout = Duration(minutes: 30);
+      
+      void resetInactivityTimer() {
+        _inactivityTimer?.cancel();
+        _inactivityTimer = Timer(_timeout, () async {
+          await authService.logout();
+          navigateToLogin();
+        });
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+### Common Authentication Errors
+
+```dart Handling Auth Errors
+final response = await authService.login(request);
+
+if (!response.isSuccessful) {
+  final error = response.messageDetail ?? '';
+  
+  if (error.contains('Invalid credentials')) {
+    showError('Username or password is incorrect');
+  } else if (error.contains('Account locked')) {
+    showError('Your account has been locked. Contact support.');
+  } else if (error.contains('Network')) {
+    showError('Network error. Please check your connection.');
+  } else {
+    showError('Login failed. Please try again.');
+  }
+}
+```
+
+### Token Expiration Handling
+
+```dart Automatic Token Refresh on 401
+class HttpService {
+  Future<ApiResponse<T>> get<T>(...) async {
+    var response = await _makeRequest(...);
+    
+    // If 401 Unauthorized, attempt token refresh
+    if (response.statusCode == 401) {
+      final refreshed = await authService.refreshTokenIfNeeded();
+      
+      if (refreshed) {
+        // Retry request with new token
+        response = await _makeRequest(...);
+      } else {
+        // Refresh failed, logout user
+        await authService.logout();
+        navigateToLogin();
+      }
+    }
+    
+    return response;
+  }
+}
+```
+
+## Complete Login Example
+
+```dart Full Authentication Flow
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  
+  Future<void> _performLogin() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final request = LoginRequest(
+        username: _usernameController.text.trim(),
+        password: _passwordController.text,
+      );
+      
+      final response = await authService.login(request);
+      
+      if (response.isSuccessful) {
+        final user = response.content!;
+        
+        // Save credentials for silent login (if user opted in)
+        if (_rememberMe) {
+          await secureStorage.saveCredentials(
+            username: request.username,
+            password: request.password,
+          );
+        }
+        
+        // Navigate to dashboard
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => DashboardScreen(userData: user),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(response.messageDetail ?? 'Login failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextField(
+              controller: _usernameController,
+              decoration: InputDecoration(labelText: 'Username'),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: 'Password'),
+            ),
+            SizedBox(height: 24),
+            _isLoading
+              ? CircularProgressIndicator()
+              : ElevatedButton(
+                  onPressed: _performLogin,
+                  child: Text('Login'),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="API Configuration" icon="gear" href="/resources/configuration">
+    Configure API endpoints and authentication settings
+  </Card>
+  
+  <Card title="Auth API" icon="code" href="/api/authentication">
+    Complete authentication API reference
+  </Card>
+  
+  <Card title="Auth Service" icon="server" href="/services/auth-service">
+    Authentication service implementation
+  </Card>
+</CardGroup>

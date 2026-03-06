@@ -1,0 +1,404 @@
+---
+title: 'Validation Scanning'
+description: 'Using the scanner to validate guide status and process operations'
+icon: 'barcode'
+---
+
+## Overview
+
+The validation scanning feature allows you to scan guide barcodes to view detailed information and validate their status for specific operations. This is crucial for ensuring guides are processed correctly through each stage of the logistics workflow.
+
+## Scanner Interface
+
+### Accessing the Scanner
+
+**From the main menu:**
+1. Open the navigation drawer (☰ menu)
+2. Select **"Escanear Guía"** (Scan Guide)
+3. Scanner screen opens ready for scanning
+
+**Quick access:**
+- Some screens include integrated scanning boxes
+- Cube creation screens have built-in scanners
+- Reception workflows include scanning interfaces
+
+### Scanner Screen Layout
+
+The scanner screen consists of:
+
+**Scan Box (Top):**
+- Text input field for barcode scanner
+- Barcode icon (📷) indicating scan mode
+- Placeholder text: "Escanee o ingrese el código de la guía"
+- Auto-focus enabled for immediate scanning
+
+**Results Area (Below):**
+- Guide details card when scan is successful
+- Error messages when validation fails
+- Loading indicator during processing
+
+<Tip>
+The scan box automatically receives focus when the screen opens, so you can start scanning immediately.
+</Tip>
+
+## Scanning Process
+
+### Using a Barcode Scanner
+
+<Steps>
+  <Step title="Prepare the Guide">
+    Position the guide barcode in clear view with good lighting.
+  </Step>
+  
+  <Step title="Scan the Barcode">
+    Point your scanner at the barcode. The scanner will read and automatically submit the code.
+  </Step>
+  
+  <Step title="Wait for Validation">
+    The system validates the guide in real-time. A loading indicator appears.
+  </Step>
+  
+  <Step title="Review Results">
+    Guide details appear if successful, or an error message if validation fails.
+  </Step>
+</Steps>
+
+### Manual Code Entry
+
+If the scanner is unavailable:
+
+1. Tap the scan box to activate keyboard
+2. Type the guide code carefully
+3. Press **Enter** to submit
+4. System validates and displays results
+
+<Warning>
+Manual entry is slower and more error-prone. Use the barcode scanner whenever possible.
+</Warning>
+
+## Guide Validation by Process
+
+The system validates guides differently based on the intended operation:
+
+### Validation Types
+
+**Register Cube (ToRegisterCube):**
+- Verifies guide is "Despachado de Aduana"
+- Checks guide is not already in a cube
+- Ensures guide can be grouped for transit
+
+**Warehouse Reception:**
+- Confirms guide is expected at warehouse
+- Validates guide is in correct transit cube
+- Checks reception eligibility
+
+**Client Dispatch:**
+- Verifies guide is "Recibido en Bodega Local"
+- Checks for pending payments
+- Validates client delivery eligibility
+
+### Validation Results
+
+The system returns three types of results:
+
+#### Success ✓
+
+```
+Message: "Guía validada correctamente"
+Result: Guide details displayed
+Sound: Success beep (if enabled)
+```
+
+The guide details card shows:
+- Guide state with colored badge
+- Master guide and child guide codes
+- Courier and subcourier information
+- Mailbox number
+- Client information
+- Dimensions and weight
+- Last update timestamp
+- Package contents (if multiple items)
+
+#### Warning ⚠
+
+```
+Dialog: Yellow warning dialog
+Message: Specific warning from system
+Behavior: Blocks scanning until acknowledged
+Sound: Error beep
+```
+
+<Note>
+Warning dialogs indicate the guide can be processed but requires attention. You must read and acknowledge the warning by pressing "Continuar" before the scanner reactivates.
+</Note>
+
+#### Error ✗
+
+```
+Dialog: Red error dialog
+Message: Detailed error description
+Behavior: Blocks scanning until acknowledged
+Sound: Error beep
+```
+
+<Warning>
+Error dialogs prevent the operation from proceeding. The guide cannot be processed until the issue is resolved.
+</Warning>
+
+## Understanding Guide Details
+
+### Information Displayed
+
+When a guide is successfully scanned:
+
+**Header Section:**
+- 🚚 Shipping icon
+- Current state label with color coding
+- 💰 Payment warning icon (if pending payments exist)
+
+**Guide Information:**
+- **Guía Master** - Parent tracking number
+- **Guía Hija** - Child/package tracking number
+- **Courier** - Primary courier service
+- **Subcourier** - Secondary courier if applicable
+- **Mailbox** - Customer mailbox identifier
+
+**Client Information:**
+- **Cliente Final** - Final recipient name
+- **Tipo de Cliente** - Client type classification
+
+**Physical Details:**
+- **Dimensiones** - Package dimensions
+- **Peso Total** - Total weight in kg
+- **Última Actualización** - Last update date/time
+
+**Package Contents:**
+- List of items in the package
+- Each item shows:
+  - Tracking number
+  - Individual weight
+  - Dimensions
+
+### Status Indicators
+
+**Color-coded badges:**
+- **Blue** - Initial/customs stages
+- **Orange** - In transit
+- **Purple** - Processing
+- **Green** - Ready for delivery
+- **Red** - Issues or holds
+
+**Special indicators:**
+- 💰 **Red money icon** - Pending payments exist
+- Must be resolved before final dispatch
+
+<Note>
+Guides with pending payments can still be scanned and processed through most stages, but cannot be dispatched to clients until payments are cleared.
+</Note>
+
+## Scanning Best Practices
+
+<AccordionGroup>
+  <Accordion title="Optimal Scanning Technique">
+    - **Hold steady** - Keep guide and scanner still
+    - **Good lighting** - Ensure barcode is well-lit
+    - **Correct distance** - Follow scanner manufacturer guidelines
+    - **Clean barcodes** - Wipe dirty or damaged barcodes
+    - **Proper angle** - Scan perpendicular to barcode
+    - **One at a time** - Don't rush multiple scans
+  </Accordion>
+
+  <Accordion title="Workflow Efficiency">
+    - **Prepare guides** - Organize before scanning session
+    - **Batch similar operations** - Process same types together
+    - **Read warnings** - Don't skip yellow dialogs
+    - **Note errors** - Document recurring issues
+    - **Verify details** - Confirm critical information
+    - **Steady pace** - Accuracy over speed
+  </Accordion>
+
+  <Accordion title="Error Prevention">
+    - **Verify status first** - Check guide is in expected state
+    - **Avoid duplicates** - System prevents but wasteful
+    - **Check orientation** - Barcode must be right-way up
+    - **Scanner settings** - Ensure scanner is configured correctly
+    - **Test scan** - Verify scanner works before batch operations
+  </Accordion>
+
+  <Accordion title="Handling Warnings">
+    - **Read completely** - Don't dismiss without reading
+    - **Document patterns** - Report recurring warnings
+    - **Understand implications** - Know what warning means
+    - **Proceed cautiously** - Warnings indicate special handling
+    - **Inform supervisor** - For unusual warnings
+  </Accordion>
+</AccordionGroup>
+
+## Blocked Scanning State
+
+The scanner blocks when validation requires attention:
+
+### When Scanning Blocks
+
+- **Warning dialog appears** - Yellow dialog with message
+- **Error dialog appears** - Red dialog with error
+- **Scan box disabled** - Gray appearance, hint changes
+- **Scanner input ignored** - Physical scanner won't trigger scans
+
+### Unblocking the Scanner
+
+1. **Read the dialog message** carefully
+2. **Press "Continuar"** to acknowledge
+3. **Scanner reactivates** automatically
+4. **Scan box regains focus**
+5. **Continue scanning** next guide
+
+<Warning>
+Never bypass or ignore blocking dialogs. They contain critical information about guide processing issues.
+</Warning>
+
+## Integration with Operations
+
+### Creating Transport Cubes
+
+When scanning to create cubes:
+
+1. Each scan validates guide eligibility
+2. Valid guides appear in list below scan box
+3. Guide count updates: "Crear Cubo (X guías)"
+4. Tap button to create cube with all scanned guides
+
+See [Creating Transport Cubes](/guide/creating-cubes) for details.
+
+### Warehouse Reception
+
+When receiving guides:
+
+1. Scan validates guide is in expected cube
+2. Confirms guide can be received
+3. Updates guide state to "Recibido en Bodega Local"
+4. Increments processed counter for cube
+
+### Client Dispatch
+
+When dispatching to clients:
+
+1. Validates guide is ready for delivery
+2. Checks for pending payments
+3. Confirms client information
+4. Updates to dispatch status
+
+## Error Handling
+
+### Common Validation Errors
+
+#### "Guide not found"
+
+**Cause:** Guide code doesn't exist in system
+
+**Solutions:**
+- Verify barcode scanned correctly
+- Try manual entry to confirm code
+- Check if guide was already processed
+- Verify guide is in your facility's system
+
+#### "Invalid status for this operation"
+
+**Cause:** Guide is not in the required status
+
+**Solutions:**
+- Check guide's current status
+- Verify you're using correct operation
+- Complete prerequisite steps first
+- Contact supervisor if status is unexpected
+
+#### "Guide already in cube"
+
+**Cause:** Guide is already assigned to a transport cube
+
+**Solutions:**
+- Check which cube contains the guide
+- Verify guide should be processed
+- Remove from other cube if necessary
+- Use existing cube instead of creating new one
+
+#### "Pending payments"
+
+**Cause:** Financial obligations not cleared
+
+**Solutions:**
+- Contact billing department
+- Verify payment status with client
+- Process payment before dispatch
+- Note guide for follow-up
+
+### Network and Technical Errors
+
+#### "Connection timeout"
+
+**Issue:** Server didn't respond in time
+
+**Solutions:**
+- Check internet connection
+- Wait a moment and try again
+- Switch to WiFi if using cellular
+- Contact IT if persistent
+
+#### "Scanner not responding"
+
+**Issue:** Barcode scanner not working
+
+**Solutions:**
+- Check scanner power/battery
+- Verify USB/Bluetooth connection
+- Restart scanner device
+- Use manual entry temporarily
+- Test scanner with another app
+
+## Troubleshooting
+
+### Scanner Won't Activate
+
+**Issue:** Can't input guide codes
+
+**Solutions:**
+- Tap scan box to activate
+- Check if dialog is blocking (press Continuar)
+- Restart app if frozen
+- Verify scanner hardware is connected
+
+### Validation Takes Too Long
+
+**Issue:** Long delay after scanning
+
+**Solutions:**
+- Check internet speed
+- Verify server status
+- Reduce scanning speed
+- Contact IT for infrastructure issues
+
+### Details Don't Display
+
+**Issue:** No information shown after successful scan
+
+**Solutions:**
+- Pull down to refresh
+- Try scanning again
+- Check if result scrolled off screen
+- Restart app if persists
+
+### Duplicate Scan Prevention Not Working
+
+**Issue:** Same guide scanned multiple times
+
+**Solutions:**
+- Wait for validation to complete
+- Don't scan until previous completes
+- Check if snackbar message appeared
+- Report bug if truly not working
+
+## Related Sections
+
+- [Creating Transport Cubes](/guide/creating-cubes)
+- [Managing Guides](/guide/managing-guides)
+- [Dashboard Overview](/guide/dashboard)

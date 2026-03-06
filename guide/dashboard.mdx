@@ -1,0 +1,178 @@
+---
+title: 'Dashboard Overview'
+description: 'Understanding the main dashboard and navigation in GBI Logistics'
+icon: 'chart-line'
+---
+
+## Overview
+
+The Dashboard is the central hub of GBI Logistics, providing a quick overview of your logistics operations and guide statistics. It displays real-time information about guides in different processing states.
+
+## Dashboard Layout
+
+When you first log in, you'll see:
+
+### Welcome Section
+
+- **Personalized greeting** with your name
+- **Entity name** (your company or organization)
+- **Version information** displayed at the bottom of the screen
+
+### Guide Statistics Grid
+
+The dashboard displays guide counts organized by their current status in a responsive grid layout:
+
+- **2 columns** on mobile devices
+- **3 columns** on tablets and larger screens
+
+Each status card shows:
+- **Large count number** indicating guides in that state
+- **Status label** describing the processing stage
+- **Interactive card** - tap to view detailed guide list
+
+## Key Status Categories
+
+The dashboard always displays these primary statuses:
+
+### Despachado de Aduana
+*Dispatched from Customs*
+
+Guides that have cleared customs and are ready for processing. This is typically the entry point for guides into your warehouse system.
+
+### Recibido en Bodega Local
+*Received in Local Warehouse*
+
+Guides that have been physically received at your local warehouse and are ready for sorting or dispatch operations.
+
+### Tránsito a Bodega
+*Transit to Warehouse*
+
+Guides currently in transit from customs to your warehouse facility.
+
+### Listo para Entrega
+*Ready for Delivery*
+
+Guides that have been processed and are ready to be dispatched to clients or subcouriers.
+
+<Note>
+Statuses with zero guides are still displayed to give you complete visibility. Additional statuses appear automatically as guides move through different stages.
+</Note>
+
+## Navigation
+
+### Accessing Guide Lists
+
+Tap any status card to:
+1. Navigate to the detailed guide list for that status
+2. View all guides in that particular state
+3. Perform operations on those guides
+
+### Side Menu (Drawer)
+
+Access the navigation menu by:
+- Tapping the **menu icon** (☰) in the top-left corner
+- Swiping from the left edge of the screen
+
+The drawer provides access to:
+- **Transport Cubes** - Manage cubes by state
+- **Guides** - Browse guides by status
+- **Scanner** - Quick access to guide scanning
+- **Settings** - Account and app configuration
+
+## Refreshing Data
+
+### Pull to Refresh
+
+Update your dashboard statistics:
+1. Pull down from the top of the guide statistics section
+2. Release to trigger the refresh
+3. Wait for the loading indicator
+4. View updated statistics
+
+<Tip>
+The dashboard automatically refreshes when you navigate back to it from other screens, ensuring you always see current data.
+</Tip>
+
+## Understanding the Interface
+
+### Visual Indicators
+
+**Color coding:**
+- **Blue cards** - Initial states (dispatched, created)
+- **Orange cards** - In-transit states
+- **Purple cards** - Processing states
+- **Green cards** - Completed states
+
+**Count display:**
+- Large, bold numbers for quick scanning
+- Automatically scales based on number magnitude
+- Zero counts displayed to show all possible states
+
+### Loading States
+
+While data loads, you'll see:
+- **Loading indicator** with message "Cargando dashboard..."
+- Prevents interaction until data is ready
+- Error messages if connection fails
+
+## Quick Actions
+
+From the dashboard, you can quickly:
+
+1. **View guides by status** - Tap any status card
+2. **Navigate to operations** - Use the side menu
+3. **Scan guides** - Access scanner from menu
+4. **Monitor progress** - See counts at a glance
+
+## Best Practices
+
+<Accordion title="Monitoring Your Operations">
+- Check the dashboard regularly throughout your shift
+- Pay attention to guides in "Despachado de Aduana" status
+- Monitor "Recibido en Bodega Local" for pending work
+- Keep "Listo para Entrega" moving to maintain flow
+</Accordion>
+
+<Accordion title="Performance Tips">
+- Use pull-to-refresh to get latest counts
+- The dashboard caches data briefly to improve performance
+- Cards use optimized rendering for smooth scrolling
+- Version number helps track app updates
+</Accordion>
+
+## Troubleshooting
+
+### Dashboard Won't Load
+
+**Issue:** "No hay datos disponibles" message appears
+
+**Solutions:**
+- Pull down to refresh the data
+- Check your internet connection
+- Verify you're logged in correctly
+- Contact support if problem persists
+
+### Counts Seem Incorrect
+
+**Issue:** Statistics don't match expected values
+
+**Solutions:**
+- Pull to refresh to get latest data
+- Check if guides were processed on another device
+- Verify your role has permission to view all guides
+- Allow a few moments for server synchronization
+
+### Can't Navigate to Guide List
+
+**Issue:** Tapping status card doesn't work
+
+**Solutions:**
+- Ensure the app has fully loaded
+- Try refreshing the dashboard
+- Restart the app if issues persist
+
+## Related Sections
+
+- [Creating Transport Cubes](/guide/creating-cubes)
+- [Managing Guides](/guide/managing-guides)
+- [Validation Scanning](/guide/validation-scanning)

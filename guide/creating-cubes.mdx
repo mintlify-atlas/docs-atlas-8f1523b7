@@ -1,0 +1,269 @@
+---
+title: 'Creating Transport Cubes'
+description: 'Step-by-step guide to create and manage transport cubes'
+icon: 'box'
+---
+
+## What are Transport Cubes?
+
+Transport Cubes are logical containers that group multiple guides together for efficient batch processing. They help organize guides during:
+
+- **Transit to warehouse** - Moving guides from customs to your facility
+- **Dispatch operations** - Preparing guides for delivery
+- **Batch processing** - Handling multiple guides simultaneously
+
+## Cube Types
+
+GBI Logistics supports four types of transport cubes:
+
+<CardGroup cols={2}>
+  <Card title="Transit to Warehouse" icon="truck-moving">
+    Groups guides being transported from customs to your local warehouse
+  </Card>
+  <Card title="Dispatch to Subcourier" icon="truck-fast">
+    Organizes guides being sent to subcourier partners
+  </Card>
+  <Card title="Dispatch to Client" icon="user">
+    Contains guides ready for final client delivery
+  </Card>
+  <Card title="Dispatch to Courier" icon="building">
+    Prepares guides for transfer to main courier services
+  </Card>
+</CardGroup>
+
+## Creating a New Cube
+
+### Step 1: Access the Creation Screen
+
+1. Navigate to **Despacho en Aduana** (Customs Dispatch)
+2. Tap the **"+" floating action button**
+3. The "Crear Nuevo Cubo" screen appears
+
+<Tip>
+The cube creation screen is optimized for scanning. Your device's scanner will be ready immediately.
+</Tip>
+
+### Step 2: Scan or Enter Guide Codes
+
+The scan box at the top allows you to add guides:
+
+**Using a scanner:**
+1. Point the scanner at the guide barcode
+2. The guide code is automatically entered
+3. Press Enter or scan to add the guide
+
+**Manual entry:**
+1. Tap the scan box to activate keyboard
+2. Type the guide code
+3. Press Enter to add the guide
+
+<Note>
+The system validates each guide in real-time as you scan. Invalid or already-processed guides will trigger an error dialog.
+</Note>
+
+### Step 3: Review Added Guides
+
+As you scan, guides appear in the list below:
+
+- **Guide code** displayed prominently
+- **Box icon** indicates the guide type
+- **Remove button** (red circle with X) to remove mistakes
+- **Most recent scan** appears at the top of the list
+
+### Step 4: Confirm and Create
+
+Once all guides are scanned:
+
+1. Review the guide count: "Crear Cubo (X guías)"
+2. Tap the **"Crear Cubo"** button
+3. Wait for validation and creation
+4. Success message displays the new cube ID
+
+## Guide Validation Process
+
+When you scan a guide, the system validates:
+
+### Eligibility Checks
+
+- **Status verification** - Guide must be in "Despachado de Aduana" status
+- **Duplicate prevention** - Guide not already in another cube
+- **Process compatibility** - Guide can be added to transit cubes
+- **Business rules** - All client-specific rules are validated
+
+### Validation Results
+
+**Success (Green):**
+```
+✓ Guide added successfully
+```
+
+**Warning (Yellow dialog):**
+```
+⚠ Guide can be added but requires attention
+[Warning message from system]
+```
+
+<Warning>
+Yellow warning dialogs block scanning until you acknowledge them by pressing "Continuar". This ensures you read important information about the guide.
+</Warning>
+
+**Error (Red dialog):**
+```
+✗ Guide cannot be added
+[Error message from system]
+```
+
+<Note>
+Error dialogs prevent the guide from being added and block scanning until you press "Continuar". This prevents accidental scanning of invalid guides.
+</Note>
+
+## Managing Scanned Guides
+
+### Removing a Guide
+
+If you scanned a guide by mistake:
+
+1. Find the guide in the list
+2. Tap the **red remove button** (○ with X)
+3. The guide is immediately removed
+4. Continue scanning
+
+### Preventing Duplicates
+
+If you scan the same guide twice:
+- A snackbar message appears: "Esta guía ya fue agregada"
+- The guide is not added again
+- Scanner remains active for next scan
+
+### Clearing All Guides
+
+To start over:
+
+1. Tap the **close button** (X) in the app bar
+2. A confirmation dialog appears:
+   - "¿Cerrar ventana?"
+   - "Se perderán las guías escaneadas"
+3. Choose:
+   - **"Cancelar"** - Return to scanning
+   - **"Sí, cerrar"** - Discard all guides and exit
+
+## Cube Creation Results
+
+### Successful Creation
+
+When the cube is created successfully:
+
+1. **Success message** displays with cube ID
+2. **Automatic navigation** back to cube list
+3. **Cube appears** in the "Created" state
+4. **Guides are removed** from available guide pool
+
+### Creation Errors
+
+If cube creation fails:
+
+1. **Error dialog** displays the reason
+2. **Guides remain** in the scan list
+3. You can:
+   - Fix the issue and try again
+   - Remove problematic guides
+   - Contact support if needed
+
+<Warning>
+Do not close the creation screen if an error occurs. Review the error message, correct the issue, and retry.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Optimal Scanning Workflow">
+    1. **Prepare guides** - Organize them before starting
+    2. **Scan continuously** - The system is optimized for rapid scanning
+    3. **Watch for warnings** - Yellow dialogs contain important information
+    4. **Verify counts** - Check the guide count before creating
+    5. **Create promptly** - Don't leave cubes partially scanned
+  </Accordion>
+
+  <Accordion title="Handling Validation Warnings">
+    - **Read carefully** - Warning messages contain important information
+    - **Document issues** - Note any recurring warnings
+    - **Proceed thoughtfully** - Warnings allow addition but need attention
+    - **Report patterns** - Inform supervisors of frequent warnings
+  </Accordion>
+
+  <Accordion title="Error Prevention">
+    - **Verify guide status** - Ensure guides are "Despachado de Aduana"
+    - **Check barcode quality** - Poor barcodes may scan incorrectly
+    - **Scan deliberately** - Rushing increases errors
+    - **Use good lighting** - Ensures accurate barcode reads
+    - **Keep focus** - Distractions lead to duplicate scans
+  </Accordion>
+
+  <Accordion title="Performance Optimization">
+    - **Stable internet** - Required for real-time validation
+    - **Charge device** - Scanning drains battery quickly
+    - **Clear space** - Adequate room for guides and scanner
+    - **Batch size** - Create cubes with 10-50 guides for optimal handling
+  </Accordion>
+</AccordionGroup>
+
+## Cube States After Creation
+
+Once created, cubes progress through these states:
+
+1. **Created** - Initial state, ready to be sent to transit
+2. **Sent** - In transit to warehouse
+3. **Downloading** - Being received at warehouse
+4. **Downloaded** - Received and ready for next operation
+
+See [Managing Guides](/guide/managing-guides) for operations on created cubes.
+
+## Troubleshooting
+
+### Scanner Not Working
+
+**Issue:** Scanner doesn't respond to barcodes
+
+**Solutions:**
+- Ensure scan box has focus (should show cursor)
+- Tap the scan box to activate it
+- Check scanner hardware connection
+- Try manual entry to verify system is responsive
+
+### Validation Taking Too Long
+
+**Issue:** Long delay after scanning each guide
+
+**Solutions:**
+- Check internet connection speed
+- Verify server is responding (ask supervisor)
+- Reduce scanning speed slightly
+- Contact IT if delays persist
+
+### Guide Won't Validate
+
+**Issue:** Repeatedly getting validation errors
+
+**Solutions:**
+- Verify the guide is in "Despachado de Aduana" status
+- Check if guide is already in another cube
+- Ensure barcode is clean and readable
+- Try manual entry to verify guide code
+- Contact supervisor if issue persists
+
+### Cube Creation Fails
+
+**Issue:** "Error al crear el cubo" message
+
+**Solutions:**
+- Read the detailed error message
+- Verify all guides are still valid
+- Try refreshing the guide list
+- Remove and re-scan problematic guides
+- Contact support with error details
+
+## Related Sections
+
+- [Dashboard Overview](/guide/dashboard)
+- [Managing Guides](/guide/managing-guides)
+- [Validation Scanning](/guide/validation-scanning)

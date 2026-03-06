@@ -1,0 +1,327 @@
+---
+title: "Warehouse Transit"
+description: "Monitor transport cubes in transit to warehouse facilities"
+icon: "truck"
+---
+
+# Warehouse Transit Workflow
+
+The warehouse transit stage tracks transport cubes that have been dispatched from customs and are on their way to warehouse facilities. Cubes in this stage have the **Sent** state (displayed as "Tránsito a Bodega" in the UI).
+
+## Overview
+
+During warehouse transit, cubes are in motion from customs to the warehouse. Operators monitor cube status, verify contents, and initiate the reception process when cubes arrive at the warehouse.
+
+## Accessing Warehouse Transit
+
+Navigate to the warehouse transit screen:
+
+1. Open the side menu from any screen
+2. Select **Tránsito a Bodega**
+3. The screen displays all cubes in the **Sent** state
+
+```dart lib/features/logistics/screens/warehouse_transit_screen.dart
+/// Warehouse transit screen with Sent state filter
+class WarehouseTransitScreen extends StatelessWidget {
+  const WarehouseTransitScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Tránsito a Bodega'),
+      ),
+      body: const TransportCubeListScreen(
+        title: 'Tránsito a Bodega',
+        initialState: VisualStates.sent,
+        showHistoric: false,
+      ),
+    );
+  }
+}
+```
+
+## Viewing Cubes in Transit
+
+### Cube List Display
+
+Each cube card shows:
+- **Cube ID**: Unique identifier
+- **Creation timestamp**: When the cube was created
+- **Guide count**: Total number of guides in the cube
+- **Operator name**: Who created the cube
+- **State label**: "Tránsito a Bodega"
+
+### Cube Details
+
+Tap any cube to view detailed information:
+
+<Steps>
+  <Step title="Open Details">
+    Tap a cube card to navigate to the details screen
+  </Step>
+  
+  <Step title="Review Information">
+    View complete cube information:
+    - Cube metadata (ID, type, state, timestamps)
+    - Complete list of guides with their states
+    - Guide details (package code, client, status)
+  </Step>
+  
+  <Step title="Verify Contents">
+    Check that all expected guides are present and correctly marked as "Ingresada" (Entered)
+  </Step>
+</Steps>
+
+## Starting Warehouse Reception
+
+When cubes arrive at the warehouse, initiate the reception process:
+
+<Steps>
+  <Step title="Select Cubes">
+    From the transit list, select one or more cubes that have arrived by tapping their checkboxes.
+  </Step>
+  
+  <Step title="Initiate Reception">
+    Tap the **Enviar a Recepción** button in the app bar. This button appears only when cubes are selected.
+  </Step>
+  
+  <Step title="Confirm Action">
+    A dialog appears asking for confirmation:
+    
+    ```
+    ¿Está seguro que desea enviar N cubos a recepción?
+    Esta acción no se puede deshacer.
+    ```
+    
+    Tap **Enviar** to confirm.
+  </Step>
+  
+  <Step title="State Transition">
+    The system:
+    - Updates cube state from **Sent** to **Downloading**
+    - Updates guide status to "ReceivedInLocalWarehouse"
+    - Moves cubes to the Warehouse Reception screen
+    - Shows success confirmation
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/screens/warehouse_transit_screen.dart
+/// Send selected cubes to warehouse reception
+Future<void> _showSendToReceptionDialog(BuildContext context) async {
+  final provider = context.read<TransportCubeProvider>();
+  final cubeCount = provider.selectedCubeIds.length;
+
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirmar envío'),
+      content: Text(
+        '¿Está seguro que desea enviar $cubeCount '
+        '${cubeCount == 1 ? 'cubo' : 'cubos'} a recepción?\n\n'
+        'Esta acción no se puede deshacer.',
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Enviar'),
+        ),
+      ],
+    ),
+  );
+
+  if (confirmed == true) {
+    // Update guide status first
+    await guideProvider.updateGuidesStatus(
+      provider.selectedCubeIds,
+      'ReceivedInLocalWarehouse',
+    );
+    
+    // Then change cube state
+    await provider.changeSelectedCubesState(
+      TransportCubeState.downloading,
+    );
+  }
+}
+```
+
+## Monitoring Transit Status
+
+### Real-Time Updates
+
+The transit screen provides real-time information:
+
+- **Cube count**: Total number of cubes in transit
+- **Pull to refresh**: Swipe down to update the list
+- **Auto-refresh**: List updates automatically when returning to the screen
+
+### Cube Information
+
+For each cube in transit, you can access:
+
+<CardGroup cols={2}>
+  <Card title="Basic Info" icon="cube">
+    - Cube ID
+    - Creation date and time
+    - Cube type
+    - Current state
+  </Card>
+  <Card title="Guide Details" icon="list">
+    - Number of guides
+    - Individual guide codes
+    - Guide states (Entered/Extracted)
+    - Client information
+  </Card>
+</CardGroup>
+
+## Business Rules
+
+<AccordionGroup>
+  <Accordion title="State Transition Rules">
+    - Cubes can only move from **Sent** to **Downloading**
+    - Cannot skip states or go backwards
+    - All guides in the cube must be updated to "ReceivedInLocalWarehouse" status
+    - State changes are atomic (all or nothing)
+  </Accordion>
+  
+  <Accordion title="Guide Status Updates">
+    When sending cubes to reception:
+    - Guide status changes from current status to "ReceivedInLocalWarehouse"
+    - This happens before the cube state change
+    - If guide update fails, cube state change is aborted
+    - All guides in selected cubes are updated together
+  </Accordion>
+  
+  <Accordion title="Read-Only Operations">
+    In the Sent state:
+    - Cannot add guides to cubes
+    - Cannot remove guides from cubes
+    - Cannot modify cube metadata
+    - Can only view information and initiate reception
+  </Accordion>
+</AccordionGroup>
+
+## Common Operations
+
+### Searching for Cubes
+
+Use the search functionality to find specific cubes:
+
+1. Tap the search icon in the app bar
+2. Enter cube ID or partial ID
+3. Results filter in real-time
+4. Clear search to show all cubes
+
+### Batch Reception
+
+Process multiple cubes at once for efficiency:
+
+<Steps>
+  <Step title="Select Multiple Cubes">
+    Tap checkboxes on multiple cube cards. The app bar shows the selection count.
+  </Step>
+  
+  <Step title="Review Selection">
+    Verify you've selected the correct cubes. Selection count appears in the button label.
+  </Step>
+  
+  <Step title="Initiate Batch Reception">
+    Tap **Enviar a Recepción N cubos** where N is the number of selected cubes.
+  </Step>
+  
+  <Step title="Confirm and Wait">
+    Confirm the operation and wait for completion. A loading indicator shows progress.
+  </Step>
+</Steps>
+
+<Warning>
+Batch operations update all selected cubes simultaneously. Ensure all cubes have physically arrived before processing them.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cubes Not Appearing">
+    **Symptoms**: Expected cubes don't show in transit list
+    
+    **Solutions**:
+    - Verify cubes were actually sent from customs dispatch
+    - Pull down to refresh the list
+    - Check you're on the correct screen (Tránsito a Bodega)
+    - Verify network connectivity
+    - Check with the customs operator who sent the cubes
+  </Accordion>
+  
+  <Accordion title="Cannot Send to Reception">
+    **Symptoms**: Send to Reception button is disabled or operation fails
+    
+    **Solutions**:
+    - Ensure you have selected at least one cube
+    - Check that you have the correct role permissions
+    - Verify network connectivity
+    - Try processing cubes one at a time instead of in batch
+    - Check for error messages in notifications
+  </Accordion>
+  
+  <Accordion title="State Change Fails">
+    **Symptoms**: Error message after confirming send to reception
+    
+    **Solutions**:
+    - Check error message for specific details
+    - Common causes:
+      - Network timeout
+      - Guide status update failure
+      - Invalid cube state
+      - Permission denied
+    - Retry the operation after a few moments
+    - Contact system administrator if problem persists
+  </Accordion>
+  
+  <Accordion title="Wrong Guide Count">
+    **Symptoms**: Number of guides doesn't match expected count
+    
+    **Solutions**:
+    - Open cube details to verify guide list
+    - Check for guides marked as "Extracted"
+    - Verify with customs dispatch operator
+    - Check cube creation history
+    - Review audit logs if available
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<Note>
+**Verify Physical Arrival**: Always verify that cubes have physically arrived at the warehouse before sending them to reception. The system cannot validate physical location.
+</Note>
+
+<Info>
+**Batch Processing**: Process multiple cubes together when they arrive in the same shipment. This is more efficient and maintains better consistency.
+</Info>
+
+<Tip>
+**Regular Monitoring**: Check the transit screen regularly to ensure timely processing of arriving cubes.
+</Tip>
+
+## Next Steps
+
+After sending cubes to reception:
+
+<CardGroup cols={2}>
+  <Card title="Warehouse Reception" icon="warehouse" href="/workflows/warehouse-reception">
+    Process cubes at the warehouse reception stage
+  </Card>
+  <Card title="State Workflow" icon="diagram-project" href="/features/state-workflow">
+    Learn about the complete state workflow
+  </Card>
+</CardGroup>
+
+## Related Documentation
+
+- [Transport Cubes](/features/transport-cubes)
+- [Customs Dispatch](/workflows/customs-dispatch)
+- [Guide Management](/features/guide-management)

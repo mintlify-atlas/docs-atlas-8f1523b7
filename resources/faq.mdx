@@ -1,0 +1,438 @@
+---
+title: 'FAQ'
+description: 'Frequently asked questions about GBI Logistics'
+icon: 'question'
+---
+
+## General Questions
+
+<AccordionGroup>
+  <Accordion title="What is GBI Logistics?">
+    GBI Logistics is a Flutter-based mobile application for managing the logistics flow of shipping guides through transport cubes. It handles the complete lifecycle from customs dispatch to final client delivery.
+  </Accordion>
+
+  <Accordion title="What are Transport Cubes?">
+    Transport cubes are containers that hold multiple shipping guides during transit. They move through different states:
+    - **Created**: Initial state when created at customs
+    - **Sent**: In transit to warehouse
+    - **Downloading**: Being received at warehouse
+    - **Downloaded**: Ready for client dispatch
+  </Accordion>
+
+  <Accordion title="What platforms does the app support?">
+    GBI Logistics is built with Flutter and supports both iOS and Android platforms.
+  </Accordion>
+
+  <Accordion title="How do I switch between dev and production environments?">
+    Change the `isDevelopment` flag in `lib/core/config/api_config.dart:16`:
+    ```dart
+    static const bool isDevelopment = false; // for production
+    ```
+    Then rebuild the app with `flutter clean && flutter run`.
+  </Accordion>
+</AccordionGroup>
+
+## Authentication & Security
+
+<AccordionGroup>
+  <Accordion title="When does my session expire?">
+    Sessions are managed with JWT tokens. The app automatically refreshes your token **30 minutes before expiration**. If the refresh fails, you'll be logged out automatically.
+    
+    Token refresh settings:
+    - Refresh before expiry: 30 minutes
+    - Check interval: 15 minutes
+  </Accordion>
+
+  <Accordion title="What happens if I close the app?">
+    Your credentials are stored securely using platform-specific secure storage (Keychain on iOS, KeyStore on Android). The app will attempt to restore your session when you reopen it.
+    
+    If the token has expired, the app will try a **silent re-login** using your stored credentials.
+  </Accordion>
+
+  <Accordion title="Why was I logged out automatically?">
+    Automatic logout occurs when:
+    - Your session token has expired
+    - Token refresh failed
+    - Silent re-login failed
+    - The API returns error codes 1 (session expired) or 2 (invalid token)
+    
+    See `lib/features/logistics/providers/auth_provider.dart:179` for the auth state check logic.
+  </Accordion>
+
+  <Accordion title="How do I clear my stored credentials?">
+    Stored credentials are automatically cleared when you log out. The `SecureCredentialsService` handles this:
+    ```dart
+    await _secureStorage.clearCredentials();
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Transport Cubes
+
+<AccordionGroup>
+  <Accordion title="How do I change a cube's state?">
+    Use the state change endpoint with a valid state transition:
+    
+    Valid transitions:
+    - `Created` → `Sent` (dispatch from customs)
+    - `Sent` → `Downloading` (start warehouse reception)
+    - `Downloading` → `Downloaded` (complete reception)
+    
+    See `lib/features/logistics/services/transport_cube_service.dart:106` for the implementation.
+  </Accordion>
+
+  <Accordion title="How do I add guides to a cube?">
+    You can add guides when creating a new cube:
+    ```dart
+    final request = NewTransportCubeRequest(
+      guideIds: [1, 2, 3, 4],
+    );
+    await transportCubeService.createTransportCube(request);
+    ```
+    
+    Or use the `changeCubeGuide` endpoint to move guides between cubes:
+    ```dart
+    final request = ChangeCubeGuideRequest(
+      guideId: 123,
+      newCubeId: 456,
+    );
+    await transportCubeService.moveGuideBetweenCubes(request);
+    ```
+  </Accordion>
+
+  <Accordion title="What if a cube is stuck in transit?">
+    If a cube shows state `Sent` for too long:
+    1. Verify the cube actually reached the warehouse physically
+    2. Check network connectivity
+    3. Manually change state to `Downloading` if reception can begin
+    4. Check the cube history for any errors: `getCubeHistory(cubeId)`
+    
+    Contact your administrator if the issue persists.
+  </Accordion>
+
+  <Accordion title="Can I delete or cancel a cube?">
+    The API doesn't provide a delete endpoint. Instead:
+    - If the cube is `Created`, you can modify its guides before sending
+    - Once `Sent`, the cube must progress through all states
+    - Use `closeTransportCube` to finalize a cube after dispatch
+  </Accordion>
+
+  <Accordion title="How do I see cube details?">
+    Fetch cube details including all guides:
+    ```dart
+    final response = await transportCubeService.getTransportCubeDetails(cubeId);
+    if (response.isSuccessful) {
+      final details = response.content;
+      print('Cube: ${details.transportCubeLabelId}');
+      print('State: ${details.state}');
+      print('Guides: ${details.guides.length}');
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="What does each cube state mean?">
+    - **Created** (Despachado de Aduana): Cube created at customs, can be modified
+    - **Sent** (Tránsito a Bodega): Cube dispatched from customs, in transit
+    - **Downloading** (Recibido en Bodega Local): Cube arrived, being processed at warehouse
+    - **Downloaded** (Listo para Entrega): Cube fully processed, ready for client dispatch
+    
+    See `lib/features/logistics/models/transport_cube_state.dart` for state definitions.
+  </Accordion>
+</AccordionGroup>
+
+## Guide Management
+
+<AccordionGroup>
+  <Accordion title="How do I validate a guide's state?">
+    Use the guide validation service before performing operations:
+    ```dart
+    final request = ValidateGuideStatusByProcessRequest(
+      guideCode: 'ABC123',
+      process: 'dispatch',
+    );
+    
+    final response = await guideValidationService.validateGuideStatusByProcess(request);
+    if (!response.content.isValid) {
+      print('Current state: ${response.content.currentState}');
+      print('Required state: ${response.content.requiredState}');
+    }
+    ```
+    
+    See `lib/features/logistics/services/guide_validation_service.dart:13`.
+  </Accordion>
+
+  <Accordion title="What guide states are available?">
+    Common guide states include:
+    - `ReceivedInLocalWarehouse`: Guide received at local warehouse
+    - Various other states defined in `lib/features/logistics/models/backend_tracking_state.dart`
+    
+    Each state has a user-friendly label via `BackendTrackingState.getLabel(state)`.
+  </Accordion>
+
+  <Accordion title="Can I move a guide from one cube to another?">
+    Yes, use the change cube guide endpoint:
+    ```dart
+    await transportCubeService.moveGuideBetweenCubes(
+      ChangeCubeGuideRequest(
+        guideId: guideId,
+        newCubeId: targetCubeId,
+      ),
+    );
+    ```
+  </Accordion>
+
+  <Accordion title="How do I scan a guide barcode?">
+    The app includes scanner widgets:
+    - `GuideDetailsScanner`: For scanning in guide details
+    - `GuideScannerDialog`: Modal scanner dialog
+    - `GuideValidationScanBox`: Scanner with validation
+    
+    Ensure camera permissions are granted before scanning.
+  </Accordion>
+</AccordionGroup>
+
+## Error Handling
+
+<AccordionGroup>
+  <Accordion title="What does error code 60 mean?">
+    **Invalid state for operation** - The guide or cube is not in the required state.
+    
+    **Solution**: Use the validation endpoint to check the current and required states, then change the state appropriately before retrying.
+  </Accordion>
+
+  <Accordion title="What does error code 102 mean?">
+    **Duplicate entry** - You're trying to add a guide that already exists in the cube.
+    
+    **Solution**: Check if the guide is already in the cube before adding it.
+  </Accordion>
+
+  <Accordion title="How do I handle validation errors?">
+    Validation errors (codes 100-199) indicate invalid input:
+    ```dart
+    if (error.isValidationError) {
+      // Show specific validation message to user
+      MessageHelper.showErrorSnackBar(context, error.message);
+    }
+    ```
+    
+    See `lib/core/models/api_error.dart:85` for error type checking.
+  </Accordion>
+
+  <Accordion title="Why do I see 'Service Unavailable' errors?">
+    Error code 503 means the backend server is temporarily unavailable:
+    - Server may be under maintenance
+    - Network connectivity issues
+    - Server overload
+    
+    **Solution**: This error is marked as retryable. Wait a moment and try again.
+  </Accordion>
+
+  <Accordion title="What are retryable errors?">
+    Errors that can be safely retried:
+    - Server errors (500+)
+    - Service unavailable (503)
+    - Network errors (400)
+    
+    Check if an error is retryable:
+    ```dart
+    if (apiError.isRetryable) {
+      // Safe to retry the operation
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## UI & User Experience
+
+<AccordionGroup>
+  <Accordion title="How do I show success messages?">
+    Use the `MessageHelper` class:
+    ```dart
+    MessageHelper.showSuccessSnackBar(context, 'Operation successful');
+    ```
+    
+    Or for API responses:
+    ```dart
+    MessageHelper.showFromResponse(context, apiResponse);
+    ```
+  </Accordion>
+
+  <Accordion title="How do I show error messages?">
+    ```dart
+    // For simple errors
+    MessageHelper.showErrorSnackBar(context, 'Error message');
+    
+    // For blocking errors (user must acknowledge)
+    MessageHelper.showBlockingErrorDialog(context, 'Critical error');
+    
+    // For warnings
+    MessageHelper.showWarning(context, 'Warning message');
+    ```
+    
+    See `lib/features/logistics/presentation/helpers/error_helper.dart`.
+  </Accordion>
+
+  <Accordion title="What's the difference between error dialog and snackbar?">
+    - **SnackBar**: Non-blocking, auto-dismisses after 4-5 seconds, appears at bottom
+    - **Dialog**: Blocking, requires user to tap button, centered on screen
+    
+    Use dialogs for critical errors that require user acknowledgment.
+  </Accordion>
+
+  <Accordion title="Can I customize message duration?">
+    Yes, for custom durations use `showIconSnackBar`:
+    ```dart
+    MessageHelper.showIconSnackBar(
+      context,
+      message: 'Custom message',
+      isSuccess: true,
+      successDuration: Duration(seconds: 10),
+    );
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Development
+
+<AccordionGroup>
+  <Accordion title="How do I add a new API endpoint?">
+    1. Add endpoint to `ApiEndpoints` class:
+    ```dart lib/core/config/api_config.dart
+    static String get myNewEndpoint => ApiConfig.buildUrl('/MyController/my-action');
+    ```
+    
+    2. Create service method:
+    ```dart
+    Future<ApiResponse<MyData>> myMethod() async {
+      return _http.get<MyData>(
+        ApiEndpoints.myNewEndpoint,
+        (json) => MyData.fromJson(json['content']),
+        queryParams: {'version': ApiConfig.version},
+      );
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="How do I add logging to my code?">
+    Use `AppLogger` for consistent logging:
+    ```dart
+    AppLogger.log('Debug message', source: 'MyClass');
+    AppLogger.error('Error occurred', error: e, source: 'MyClass');
+    ```
+    
+    Or use developer log for detailed debugging:
+    ```dart
+    import 'dart:developer' as developer;
+    developer.log('Debug info', name: 'MyService');
+    ```
+  </Accordion>
+
+  <Accordion title="How do I create a new model?">
+    Follow the existing model pattern:
+    ```dart
+    import 'package:flutter/foundation.dart';
+    
+    @immutable
+    class MyModel {
+      final String id;
+      final String name;
+      
+      const MyModel({required this.id, required this.name});
+      
+      factory MyModel.fromJson(Map<String, dynamic> json) {
+        return MyModel(
+          id: json['id'] as String,
+          name: json['name'] as String,
+        );
+      }
+      
+      Map<String, dynamic> toJson() {
+        return {'id': id, 'name': name};
+      }
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="What's the project structure?">
+    ```
+    lib/
+    ├── core/
+    │   ├── config/         # API configuration
+    │   ├── models/         # Base models (ApiResponse, ApiError)
+    │   ├── services/       # Core services (HTTP, logging)
+    │   └── observers/      # Lifecycle observers
+    └── features/
+        └── logistics/
+            ├── models/      # Domain models
+            ├── services/    # Business logic
+            ├── providers/   # State management
+            ├── screens/     # UI screens
+            └── widgets/     # Reusable widgets
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## API Integration
+
+<AccordionGroup>
+  <Accordion title="What API version is used?">
+    The app uses API version `1.0`. All endpoints are prefixed with `/api/v1.0`.
+    
+    Version is defined in `lib/core/config/api_config.dart:22`:
+    ```dart
+    static const String version = '1.0';
+    ```
+  </Accordion>
+
+  <Accordion title="How are API errors handled?">
+    The `ApiError` model categorizes errors:
+    - `isAuthError`: Codes 1-9 (authentication issues)
+    - `isValidationError`: Codes 100-199 (input validation)
+    - `isBusinessError`: Codes 200-499 (business logic)
+    - `isServerError`: Codes 500+ (server issues)
+    
+    See `lib/core/models/api_error.dart` for details.
+  </Accordion>
+
+  <Accordion title="How do I handle paginated results?">
+    Use pagination parameters in API calls:
+    ```dart
+    final response = await transportCubeService.getTransportCubes(
+      page: 1,
+      itemsPerPage: 20,
+      state: TransportCubeState.created,
+    );
+    ```
+  </Accordion>
+
+  <Accordion title="What if the API response format changes?">
+    Models use factory constructors for JSON parsing. Update the `fromJson` method in the affected model:
+    ```dart
+    factory MyModel.fromJson(Map<String, dynamic> json) {
+      return MyModel(
+        // Update field mappings here
+      );
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Still Have Questions?
+
+<CardGroup cols={2}>
+  <Card title="Configuration Guide" icon="gear" href="/resources/configuration">
+    Learn about API and app configuration
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/resources/troubleshooting">
+    Solutions to common problems
+  </Card>
+  
+  <Card title="Contributing" icon="code-branch" href="/resources/contributing">
+    How to contribute to the project
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/overview">
+    Complete API documentation
+  </Card>
+</CardGroup>

@@ -1,0 +1,215 @@
+---
+title: "Guide Models"
+description: "Shipping guide models and package details"
+---
+
+## Overview
+
+Guide models represent shipping packages and their details in the logistics system.
+
+## Guide
+
+Basic shipping guide information.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `packageCode` | `String` | Unique guide identifier |
+| `state` | `String` | Current tracking state |
+| `lastUpdateDateTime` | `DateTime` | Last status update timestamp |
+| `subcourierId` | `int?` | Assigned subcourier ID (optional) |
+
+### Methods
+
+- `stateLabel` - Returns the localized state label using `BackendTrackingState`
+
+### Code Example
+
+```dart
+import 'package:flutter/foundation.dart';
+import 'backend_tracking_state.dart';
+
+@immutable
+class Guide {
+  final String packageCode;
+  final String state;
+  final DateTime lastUpdateDateTime;
+  final int? subcourierId;
+
+  const Guide({
+    required this.packageCode,
+    required this.state,
+    required this.lastUpdateDateTime,
+    this.subcourierId,
+  });
+
+  factory Guide.fromJson(Map<String, dynamic> json) {
+    return Guide(
+      packageCode: json['packageCode'] as String,
+      state: json['state'] as String,
+      lastUpdateDateTime: DateTime.parse(json['lastUpdateDateTime'] as String),
+      subcourierId: json['subcourierId'] as int?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'packageCode': packageCode,
+      'state': state,
+      'lastUpdateDateTime': lastUpdateDateTime.toIso8601String(),
+      'subcourierId': subcourierId,
+    };
+  }
+
+  String get stateLabel => BackendTrackingState.getLabel(state);
+}
+```
+
+## GuideDetails
+
+Detailed information about a shipping guide including packages.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `masterGuide` | `String?` | Master guide number |
+| `guideCode` | `String?` | Guide code |
+| `subcourierName` | `String?` | Subcourier name |
+| `courierName` | `String?` | Courier name |
+| `packages` | `int` | Number of packages |
+| `dimensions` | `String?` | Package dimensions |
+| `totalWeight` | `double` | Total weight (rounded to 2 decimals) |
+| `mailbox` | `String?` | Mailbox identifier |
+| `stateLabel` | `String?` | Localized state label |
+| `updateDateTime` | `DateTime` | Last update timestamp |
+| `packageItems` | `List<PackageItem>?` | List of individual packages |
+| `finalClientName` | `String?` | Final client name |
+| `finalClientTypeLabel` | `String?` | Client type label |
+| `hasPendingPayments` | `bool` | Whether there are pending payments |
+
+### Code Example
+
+```dart
+import 'package:flutter/foundation.dart';
+
+@immutable
+class GuideDetails {
+  final String? masterGuide;
+  final String? guideCode;
+  final String? subcourierName;
+  final String? courierName;
+  final int packages;
+  final String? dimensions;
+  final double totalWeight;
+  final String? mailbox;
+  final String? stateLabel;
+  final DateTime updateDateTime;
+  final List<PackageItem>? packageItems;
+  final String? finalClientName;
+  final String? finalClientTypeLabel;
+  final bool hasPendingPayments;
+
+  const GuideDetails({
+    this.masterGuide,
+    this.guideCode,
+    this.subcourierName,
+    this.courierName,
+    required this.packages,
+    this.dimensions,
+    required this.totalWeight,
+    this.mailbox,
+    this.stateLabel,
+    required this.updateDateTime,
+    this.packageItems,
+    this.finalClientName,
+    this.finalClientTypeLabel,
+    this.hasPendingPayments = false,
+  });
+
+  factory GuideDetails.fromJson(Map<String, dynamic> json) {
+    final rawWeight = (json['totalWeight'] as num?)?.toDouble() ?? 0.0;
+    final roundedWeight = (rawWeight * 100).round() / 100;
+    
+    return GuideDetails(
+      masterGuide: json['masterGuide'] as String?,
+      guideCode: json['guideCode'] as String?,
+      subcourierName: json['subcourierName'] as String?,
+      courierName: json['courierName'] as String?,
+      packages: json['packages'] as int? ?? 0,
+      dimensions: json['dimensions'] as String?,
+      totalWeight: roundedWeight,
+      mailbox: json['mailbox'] as String?,
+      stateLabel: json['stateLabel'] as String?,
+      updateDateTime: DateTime.parse(json['updateDateTime'] as String),
+      packageItems: (json['packageItems'] as List<dynamic>?)
+          ?.map((e) => PackageItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      finalClientName: json['finalClientName'] as String?,
+      finalClientTypeLabel: json['finalClientTypeLabel'] as String?,
+      hasPendingPayments: json['hasPendingPayments'] as bool? ?? false,
+    );
+  }
+}
+```
+
+## PackageItem
+
+Individual package within a guide.
+
+### Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | `int` | Package identifier |
+| `trackingNumber` | `String?` | Tracking number |
+| `weight` | `double` | Package weight |
+| `dimensions` | `String?` | Package dimensions |
+
+### Code Example
+
+```dart
+@immutable
+class PackageItem {
+  final int id;
+  final String? trackingNumber;
+  final double weight;
+  final String? dimensions;
+
+  const PackageItem({
+    required this.id,
+    this.trackingNumber,
+    required this.weight,
+    this.dimensions,
+  });
+  
+  factory PackageItem.fromJson(Map<String, dynamic> json) {
+    return PackageItem(
+      id: json['id'] as int,
+      trackingNumber: json['trackingNumber'] as String?,
+      weight: (json['weight'] as num?)?.toDouble() ?? 0.0,
+      dimensions: json['dimensions'] as String?,
+    );
+  }
+}
+```
+
+## Usage
+
+```dart
+// Working with guide details
+final response = await guideService.getGuideDetails(guideCode);
+if (response.isSuccessful && response.content != null) {
+  final details = response.content!;
+  print('Guide: ${details.guideCode}');
+  print('Weight: ${details.totalWeight} kg');
+  print('Packages: ${details.packages}');
+  print('Has pending payments: ${details.hasPendingPayments}');
+}
+```
+
+## Related
+
+- [GuideService](/services/guide-service) - Service for guide operations
+- [Transport Cube Models](/models/transport-cube) - Container for guides

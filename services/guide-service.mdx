@@ -1,0 +1,429 @@
+---
+title: "GuideService"
+description: "Service for guide operations and management"
+---
+
+## Overview
+
+The `GuideService` class provides methods for managing shipping guides, including retrieval, status updates, and dispatch operations.
+
+## Class Definition
+
+```dart
+class GuideService {
+  final HttpService _http;
+
+  GuideService(this._http);
+}
+```
+
+## Core Methods
+
+### getGuidesPaginated
+
+Retrieves a paginated list of guides filtered by status.
+
+```dart
+Future<ApiResponse<GetGuidesPaginatedResponse>> getGuidesPaginated({
+  required int page,
+  required int pageSize,
+  required String status,
+  String? guideCode,
+})
+```
+
+**Example:**
+
+```dart
+final response = await guideService.getGuidesPaginated(
+  page: 1,
+  pageSize: 50,
+  status: 'InWarehouse',
+);
+
+if (response.isSuccessful && response.content?.content != null) {
+  final guides = response.content!.content!;
+  print('Total guides: ${response.content!.totalItems}');
+  
+  for (final guide in guides) {
+    print('${guide.packageCode}: ${guide.stateLabel}');
+  }
+}
+```
+
+**Parameters:**
+- `page` - Page number (1-based)
+- `pageSize` - Number of items per page
+- `status` - Filter by guide status
+- `guideCode` - Optional: Search for specific guide code
+
+**Search Example:**
+
+```dart
+final response = await guideService.getGuidesPaginated(
+  page: 1,
+  pageSize: 10,
+  status: 'All',
+  guideCode: 'PKG001',
+);
+
+if (response.isSuccessful && response.content?.content != null) {
+  final guides = response.content!.content!;
+  if (guides.isNotEmpty) {
+    print('Found guide: ${guides.first.packageCode}');
+  } else {
+    print('Guide not found');
+  }
+}
+```
+
+### updateGuideStatus
+
+Updates the status of one or more guides.
+
+```dart
+Future<ApiResponse<void>> updateGuideStatus(
+  UpdateGuideStatusRequest request, {
+  bool suppressAuthHandling = true,
+})
+```
+
+**Example:**
+
+```dart
+final request = UpdateGuideStatusRequest(
+  guides: ['PKG001', 'PKG002', 'PKG003'],
+  newStatus: 'InWarehouse',
+);
+
+final response = await guideService.updateGuideStatus(request);
+
+if (response.isSuccessful) {
+  print('Successfully updated ${request.guides.length} guides');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**Common Status Values:**
+- `"InTransit"` - Guide is in transit
+- `"InWarehouse"` - Guide arrived at warehouse
+- `"OutForDelivery"` - Guide is out for delivery
+- `"Delivered"` - Guide was delivered
+- `"Failed"` - Delivery failed
+
+**Validation:**
+
+```dart
+if (request.guides.isEmpty) {
+  return ApiResponse.error(messageDetail: 'No guides provided');
+}
+```
+
+### dispatchToClient
+
+Dispatches guides to a client (individual or business).
+
+```dart
+Future<ApiResponse<void>> dispatchToClient(
+  DispatchGuideToClientRequest request
+)
+```
+
+**Example:**
+
+```dart
+final request = DispatchGuideToClientRequest(
+  guides: ['PKG001', 'PKG002'],
+  entityRole: 'Individual',
+  entityIdentifier: 'ID123456789',
+);
+
+final response = await guideService.dispatchToClient(request);
+
+if (response.isSuccessful) {
+  print('Guides dispatched to client');
+} else {
+  print('Error: ${response.messageDetail}');
+}
+```
+
+**Parameters:**
+- `guides` - List of guide codes to dispatch
+- `entityRole` - Client type: `"Individual"`, `"Business"`, etc.
+- `entityIdentifier` - Client ID or tax ID
+
+## Complete Usage Example
+
+```dart
+class GuideManagementScreen extends StatefulWidget {
+  @override
+  _GuideManagementScreenState createState() => _GuideManagementScreenState();
+}
+
+class _GuideManagementScreenState extends State<GuideManagementScreen> {
+  final GuideService _guideService = GuideService(httpService);
+  List<Guide> _guides = [];
+  String _currentStatus = 'InWarehouse';
+  int _currentPage = 1;
+  int _totalPages = 1;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadGuides();
+  }
+  
+  Future<void> _loadGuides() async {
+    final response = await _guideService.getGuidesPaginated(
+      page: _currentPage,
+      pageSize: 50,
+      status: _currentStatus,
+    );
+    
+    if (response.isSuccessful && response.content?.content != null) {
+      setState(() {
+        _guides = response.content!.content!;
+        _totalPages = response.content!.totalPages ?? 1;
+      });
+    }
+  }
+  
+  Future<void> _updateStatus(List<String> guideCodes, String newStatus) async {
+    final request = UpdateGuideStatusRequest(
+      guides: guideCodes,
+      newStatus: newStatus,
+    );
+    
+    final response = await _guideService.updateGuideStatus(request);
+    
+    if (response.isSuccessful) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Status updated successfully')),
+      );
+      _loadGuides();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${response.messageDetail}')),
+      );
+    }
+  }
+  
+  Future<void> _dispatchToClient(
+    List<String> guideCodes,
+    String clientId,
+    String clientType,
+  ) async {
+    final request = DispatchGuideToClientRequest(
+      guides: guideCodes,
+      entityRole: clientType,
+      entityIdentifier: clientId,
+    );
+    
+    final response = await _guideService.dispatchToClient(request);
+    
+    if (response.isSuccessful) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dispatched to client')),
+      );
+      _loadGuides();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${response.messageDetail}')),
+      );
+    }
+  }
+  
+  Future<void> _searchGuide(String guideCode) async {
+    final response = await _guideService.getGuidesPaginated(
+      page: 1,
+      pageSize: 10,
+      status: 'All',
+      guideCode: guideCode,
+    );
+    
+    if (response.isSuccessful && response.content?.content != null) {
+      final guides = response.content!.content!;
+      if (guides.isNotEmpty) {
+        setState(() {
+          _guides = guides;
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Guide not found')),
+        );
+      }
+    }
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Guides'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () => _showSearchDialog(),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Status filter
+          DropdownButton<String>(
+            value: _currentStatus,
+            items: [
+              DropdownMenuItem(value: 'All', child: Text('All')),
+              DropdownMenuItem(value: 'InWarehouse', child: Text('In Warehouse')),
+              DropdownMenuItem(value: 'OutForDelivery', child: Text('Out for Delivery')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _currentStatus = value;
+                  _currentPage = 1;
+                });
+                _loadGuides();
+              }
+            },
+          ),
+          // Guide list
+          Expanded(
+            child: ListView.builder(
+              itemCount: _guides.length,
+              itemBuilder: (context, index) {
+                final guide = _guides[index];
+                return ListTile(
+                  title: Text(guide.packageCode),
+                  subtitle: Text(guide.stateLabel),
+                  trailing: Text(
+                    DateFormat('dd/MM/yyyy').format(guide.lastUpdateDateTime),
+                  ),
+                  onTap: () => _viewGuideDetails(guide),
+                );
+              },
+            ),
+          ),
+          // Pagination
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: Icon(Icons.chevron_left),
+                onPressed: _currentPage > 1
+                    ? () {
+                        setState(() => _currentPage--);
+                        _loadGuides();
+                      }
+                    : null,
+              ),
+              Text('Page $_currentPage of $_totalPages'),
+              IconButton(
+                icon: Icon(Icons.chevron_right),
+                onPressed: _currentPage < _totalPages
+                    ? () {
+                        setState(() => _currentPage++);
+                        _loadGuides();
+                      }
+                    : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+```
+
+## Batch Operations
+
+### Update Multiple Guides
+
+```dart
+Future<void> updateMultipleGuides(
+  List<String> guideCodes,
+  String newStatus,
+) async {
+  // Validate
+  if (guideCodes.isEmpty) {
+    print('No guides selected');
+    return;
+  }
+  
+  // Update in batches of 50
+  const batchSize = 50;
+  for (var i = 0; i < guideCodes.length; i += batchSize) {
+    final batch = guideCodes.skip(i).take(batchSize).toList();
+    
+    final request = UpdateGuideStatusRequest(
+      guides: batch,
+      newStatus: newStatus,
+    );
+    
+    final response = await guideService.updateGuideStatus(request);
+    
+    if (!response.isSuccessful) {
+      print('Batch ${i ~/ batchSize + 1} failed: ${response.messageDetail}');
+    }
+  }
+}
+```
+
+## Logging
+
+All operations are automatically logged:
+
+```dart
+// Logged on status update
+AppLogger.log(
+  'Actualizando estado de 5 guías a InWarehouse',
+  source: 'GuideService'
+);
+
+// Logged on result
+AppLogger.log(
+  'Resultado de actualización:\n- Exitoso: true',
+  source: 'GuideService'
+);
+
+// Logged on dispatch
+AppLogger.log(
+  'Despachando guías a cliente:\nRol: Individual\nIdentificador: ID123\nGuías: PKG001, PKG002',
+  source: 'GuideService'
+);
+```
+
+## Error Handling
+
+```dart
+final response = await guideService.updateGuideStatus(request);
+
+if (!response.isSuccessful) {
+  // Handle specific errors
+  if (response.messageDetail?.contains('not found') ?? false) {
+    print('One or more guides not found');
+  } else if (response.messageDetail?.contains('invalid state') ?? false) {
+    print('Invalid state transition');
+  } else {
+    print('Error: ${response.messageDetail}');
+  }
+}
+```
+
+## Best Practices
+
+1. **Validate guide lists** - Check for empty lists before operations
+2. **Handle pagination** - Use `totalItems` and `totalPages` from responses
+3. **Batch large updates** - Process guides in batches to avoid timeouts
+4. **Check response success** - Always verify `isSuccessful` before proceeding
+5. **Display errors to users** - Show `messageDetail` in UI
+6. **Refresh after operations** - Reload guide list after updates
+7. **Use search wisely** - Filter by status before searching by code
+
+## Related
+
+- [Guide Models](/models/guide) - Guide data structures
+- [TransportCubeService](/services/transport-cube-service) - For cube operations
+- [HttpService](/services/http-service) - Underlying HTTP service

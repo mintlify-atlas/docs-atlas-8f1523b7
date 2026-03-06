@@ -1,0 +1,301 @@
+---
+title: 'Transport Cubes'
+description: 'Understanding transport cubes - the core container system for managing and tracking groups of guides'
+icon: 'box'
+---
+
+## Overview
+
+Transport Cubes are the fundamental organizational units in GBI Logistics for grouping and managing guides through their journey. A transport cube acts as a virtual container that holds multiple guides and tracks them through various stages of the logistics workflow.
+
+## What is a Transport Cube?
+
+A transport cube is a logical grouping mechanism that:
+- **Groups related guides** for efficient batch processing
+- **Tracks state transitions** through the 4-stage workflow (Created → Sent → Downloading → Downloaded)
+- **Enables batch operations** on multiple guides simultaneously
+- **Provides traceability** with complete history and audit trail
+
+## Cube Types
+
+The system supports four distinct cube types, each serving a specific logistics purpose:
+
+<CardGroup cols={2}>
+  <Card title="Transit to Warehouse" icon="warehouse">
+    **TransitToWarehouse** (Code: 0)
+    
+    Cubes moving guides from customs dispatch to warehouse facilities.
+  </Card>
+  
+  <Card title="Dispatch to Subcourier" icon="truck">
+    **ToDispatchToSubcourier** (Code: 1)
+    
+    Cubes prepared for transfer to partner subcouriers.
+  </Card>
+  
+  <Card title="Dispatch to Client" icon="user">
+    **ToDispatchToClient** (Code: 2)
+    
+    Cubes ready for final delivery to end customers.
+  </Card>
+  
+  <Card title="Dispatch to Courier" icon="shipping-fast">
+    **ToDispatchToCourier** (Code: 3)
+    
+    Cubes designated for transfer to primary couriers.
+  </Card>
+</CardGroup>
+
+### Code Implementation
+
+The `CubeType` enum provides type-safe cube type handling:
+
+```dart lib/features/logistics/models/cube_type.dart
+enum CubeType {
+  /// Tránsito a bodega
+  transitToWarehouse('TransitToWarehouse'),
+
+  /// Despacho a subcourier
+  toDispatchToSubcourier('ToDispatchToSubcourier'),
+
+  /// Despacho a cliente
+  toDispatchToClient('ToDispatchToClient'),
+
+  /// Despacho a courier
+  toDispatchToCourier('ToDispatchToCourier');
+
+  final String value;
+  const CubeType(this.value);
+
+  // Conversion methods
+  static CubeType? fromString(String? value) { ... }
+  static CubeType? fromInt(int? code) { ... }
+  static CubeType? fromDynamic(dynamic v) { ... }
+}
+```
+
+## Cube Lifecycle and States
+
+Every transport cube progresses through a 4-stage workflow. See [State Workflow](/features/state-workflow) for detailed state management.
+
+<Steps>
+  <Step title="Created">
+    Cube is initialized in customs dispatch with guides added
+    
+    - Color: Blue (#1976D2)
+    - Icon: `local_shipping`
+  </Step>
+  
+  <Step title="Sent">
+    Cube is in transit to warehouse
+    
+    - Color: Orange (#F57C00)
+    - Icon: `directions_run`
+  </Step>
+  
+  <Step title="Downloading">
+    Cube is being received at warehouse
+    
+    - Color: Purple (#7B1FA2)
+    - Icon: `downloading`
+  </Step>
+  
+  <Step title="Downloaded">
+    Cube is ready for final dispatch to client
+    
+    - Color: Green (#2E7D32)
+    - Icon: `check_circle`
+  </Step>
+</Steps>
+
+## Cube Information Model
+
+Each transport cube contains key metadata:
+
+```dart lib/features/logistics/models/transport_cube_info.dart
+class TransportCubeInfo {
+  final int id;                      // Unique cube identifier
+  final DateTime registerDateTime;   // Creation timestamp
+  final String state;                // Current state (Created|Sent|Downloading|Downloaded)
+  final int guides;                  // Number of guides in cube
+  final String? stateLabel;          // Human-readable state
+  final bool allowClose;             // Whether cube can be closed
+  final CubeType type;               // Cube type
+  final String? typeLabel;           // Human-readable type
+  final String? operatorName;        // Operator who created the cube
+}
+```
+
+## Creating Transport Cubes
+
+Transport cubes are created through the `TransportCubeService`:
+
+```dart Example: Creating a New Cube
+// Prepare the request with guide codes
+final request = NewTransportCubeRequest(
+  guideCodes: ['GBI001', 'GBI002', 'GBI003'],
+  type: CubeType.transitToWarehouse,
+);
+
+// Create the cube
+final response = await transportCubeService.createTransportCube(request);
+
+if (response.isSuccessful) {
+  final cubeId = response.content?.content?.id;
+  final labelId = response.content?.content?.transportCubeLabelId;
+  print('Cube created: ID=$cubeId, Label=$labelId');
+}
+```
+
+<Note>
+  All guides must pass validation checks before being added to a cube. See [Guide Management](/features/guide-management) for validation details.
+</Note>
+
+## Managing Cubes
+
+### Retrieving Cubes
+
+```dart Fetching Transport Cubes
+final response = await transportCubeService.getTransportCubes(
+  page: 1,
+  itemsPerPage: 20,
+  state: TransportCubeState.created,
+);
+
+if (response.isSuccessful) {
+  final cubes = response.content?.items ?? [];
+  print('Found ${cubes.length} cubes');
+}
+```
+
+### Changing Cube State
+
+```dart Transitioning Cube States
+final request = ChangeTranportCubesStateRequest(
+  transportCubeIds: [101, 102],
+  newState: TransportCubeState.sent,
+);
+
+final response = await transportCubeService.changeTransportCubesState(request);
+```
+
+### Getting Cube Details
+
+```dart Retrieving Detailed Information
+final response = await transportCubeService.getTransportCubeDetails(cubeId);
+
+if (response.isSuccessful) {
+  final details = response.content;
+  print('Cube has ${details.guides.length} guides');
+  print('Current state: ${details.state}');
+}
+```
+
+### Closing Cubes
+
+Cubes must be closed before final dispatch:
+
+```dart Closing Transport Cubes
+final response = await transportCubeService.closeTransportCubes([cubeId]);
+
+if (response.isSuccessful) {
+  print('Cube closed successfully');
+}
+```
+
+<Warning>
+  Only cubes in the **Downloaded** state with `allowClose: true` can be closed.
+</Warning>
+
+## Batch Operations
+
+Transport cubes enable efficient batch processing:
+
+### Dispatch Multiple Cubes to Client
+
+```dart Batch Dispatch
+final cubeIds = [101, 102, 103];
+final response = await transportCubeService.dispatchCubeToClient(cubeIds);
+
+if (response.isSuccessful) {
+  print('${cubeIds.length} cubes dispatched');
+}
+```
+
+### Moving Guides Between Cubes
+
+```dart Inter-Cube Guide Transfer
+final request = ChangeCubeGuideRequest(
+  guideCode: 'GBI001',
+  sourceCubeId: 101,
+  targetCubeId: 102,
+);
+
+final response = await transportCubeService.moveGuideBetweenCubes(request);
+```
+
+## UI Helpers
+
+The `TransportCubeState` class provides UI presentation helpers:
+
+```dart State Presentation
+// Get localized label
+final label = TransportCubeState.getLabel('Created');  // Returns: 'Creado'
+
+// Get theme color
+final color = Color(TransportCubeState.getColor('Sent'));  // Returns: Orange
+
+// Get icon
+final icon = Icon(TransportCubeState.getIcon('Downloading'));  // Returns: downloading icon
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Cube Size Management">
+    - Keep cube sizes reasonable (50-200 guides per cube)
+    - Don't mix different cube types
+    - Group guides by destination or route
+  </Accordion>
+  
+  <Accordion title="State Transitions">
+    - Always follow the linear workflow: Created → Sent → Downloading → Downloaded
+    - Validate state transitions before attempting changes
+    - Handle failed state transitions gracefully
+  </Accordion>
+  
+  <Accordion title="Error Handling">
+    ```dart
+    final response = await transportCubeService.createTransportCube(request);
+    
+    if (!response.isSuccessful) {
+      // Check for specific error codes
+      if (response.messageDetail?.contains('invalid state') ?? false) {
+        // Handle state validation error
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Performance">
+    - Use pagination when fetching cube lists
+    - Cache cube details to reduce API calls
+    - Batch operations when processing multiple cubes
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Guide Management" icon="clipboard-list" href="/features/guide-management">
+    Learn how guides are tracked within transport cubes
+  </Card>
+  
+  <Card title="State Workflow" icon="diagram-project" href="/features/state-workflow">
+    Detailed state transition rules and diagrams
+  </Card>
+  
+  <Card title="API Reference" icon="code" href="/api/transport-cubes">
+    Complete API documentation for transport cubes
+  </Card>
+</CardGroup>

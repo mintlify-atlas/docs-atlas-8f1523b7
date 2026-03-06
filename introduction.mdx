@@ -1,0 +1,237 @@
+---
+title: Introduction to GBI Logistics
+description: Welcome to GBI Logistics - A comprehensive Flutter-based logistics management system for efficient dispatch and reception operations
+---
+
+# Welcome to GBI Logistics
+
+GBI Logistics (LogiRuta) is a powerful mobile logistics management application built with Flutter, designed to streamline the entire lifecycle of package dispatch and reception through an innovative **Transport Cube** system.
+
+<Note>
+  GBI Logistics is currently at version **1.0.0.8** and actively maintained for Android and iOS platforms.
+</Note>
+
+## What is GBI Logistics?
+
+GBI Logistics is a comprehensive SaaS solution that manages the complete logistics workflow from customs clearance to final client delivery. The system uses a unique **Transport Cube** concept - containers that group multiple shipping guides and move through different operational states as they progress through the logistics chain.
+
+### Key Concepts
+
+**Transport Cubes**: Logical containers that group multiple shipping guides together, allowing batch operations and efficient tracking through the logistics pipeline.
+
+**Shipping Guides (Guías)**: Individual packages tracked through various states from customs to final delivery.
+
+**State-Based Workflow**: Both cubes and guides follow a predefined state progression that ensures proper handling and visibility at each stage.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Transport Cube Management" icon="cube">
+    Create, manage, and track transport cubes through their complete lifecycle - from customs dispatch to client delivery.
+  </Card>
+  
+  <Card title="Multi-State Tracking" icon="route">
+    Track packages through four distinct operational states with real-time updates and comprehensive history.
+  </Card>
+  
+  <Card title="Barcode Scanning" icon="barcode">
+    Integrated barcode scanning for quick guide verification and cube operations, reducing manual data entry.
+  </Card>
+  
+  <Card title="Real-Time Dashboard" icon="dashboard">
+    Comprehensive dashboard showing statistics by state, providing instant visibility into operations.
+  </Card>
+  
+  <Card title="Role-Based Operations" icon="users">
+    Different operational workflows for customs dispatch, warehouse transit, reception, and client dispatch.
+  </Card>
+  
+  <Card title="Offline Capability" icon="wifi-slash">
+    Secure local storage with automatic synchronization when connectivity is restored.
+  </Card>
+</CardGroup>
+
+## System Architecture
+
+### High-Level Architecture
+
+GBI Logistics follows a clean, modular architecture built on Flutter's best practices:
+
+```
+┌─────────────────────────────────────────┐
+│         Presentation Layer              │
+│  (Screens, Widgets, UI Components)      │
+└─────────────┬───────────────────────────┘
+              │
+┌─────────────▼───────────────────────────┐
+│         Business Logic Layer            │
+│    (Providers, State Management)        │
+└─────────────┬───────────────────────────┘
+              │
+┌─────────────▼───────────────────────────┐
+│           Service Layer                 │
+│  (API Services, Business Services)      │
+└─────────────┬───────────────────────────┘
+              │
+┌─────────────▼───────────────────────────┐
+│          Core Services                  │
+│  (HTTP, Storage, Authentication)        │
+└─────────────────────────────────────────┘
+```
+
+### Technology Stack
+
+- **Framework**: Flutter 3.0+ with Dart SDK
+- **State Management**: Provider pattern for reactive state
+- **API Communication**: RESTful API integration with automatic token refresh
+- **Storage**: Flutter Secure Storage for sensitive data, SharedPreferences for user settings
+- **UI Components**: Material Design 3 with custom components
+
+<Info>
+  The codebase follows a **feature-based architecture** with clear separation between core functionality and logistics-specific features.
+</Info>
+
+## Transport Cube State Flow
+
+Understanding the state flow is crucial for using GBI Logistics effectively:
+
+<Steps>
+  <Step title="Created (Despachado de Aduana)">
+    Transport cube is created with selected guides during customs dispatch. This is the initial state where guides are grouped for shipment.
+  </Step>
+  
+  <Step title="Sent (Tránsito a Bodega)">
+    Cube is sent from customs to the warehouse. During this state, the cube is in transit and no modifications are allowed.
+  </Step>
+  
+  <Step title="Downloading (Recibido en Bodega Local)">
+    Cube arrives at the local warehouse and reception process begins. Guides are verified and received.
+  </Step>
+  
+  <Step title="Downloaded (Listo para Entrega)">
+    Reception is complete and guides are ready for final dispatch to clients. This is the final operational state.
+  </Step>
+</Steps>
+
+## Who Should Use This System?
+
+GBI Logistics is designed for:
+
+- **Logistics Operations Teams**: Managing day-to-day dispatch and reception operations
+- **Warehouse Staff**: Receiving and processing incoming transport cubes
+- **Customs Personnel**: Creating and dispatching transport cubes from customs
+- **Delivery Coordinators**: Managing final dispatch to clients
+- **Operations Managers**: Monitoring overall logistics flow and statistics
+
+## Core Screens Overview
+
+### Operational Screens
+
+- **Dashboard**: Real-time statistics and quick access to all operations
+- **Customs Dispatch**: Create new transport cubes and manage guides in Created state
+- **Warehouse Transit**: Monitor cubes in transit to warehouse (Sent state)
+- **Warehouse Reception**: Receive and verify cubes arriving at warehouse (Downloading state)
+- **Client Dispatch**: Manage final dispatch of guides to clients (Downloaded state)
+
+### Supporting Screens
+
+- **Transport Cube Details**: View and manage individual cube details across all states
+- **Guide Scanner**: Scan and verify individual guides
+- **New Transport Cube**: Create new cubes by scanning guides
+
+<Warning>
+  Each screen is state-specific and provides operations relevant only to that state. Attempting invalid state transitions will result in errors.
+</Warning>
+
+## System Benefits
+
+### Operational Efficiency
+
+- **Batch Operations**: Process multiple guides simultaneously through transport cubes
+- **Reduced Errors**: Barcode scanning minimizes manual data entry mistakes
+- **Real-Time Visibility**: Instant status updates across all operational stages
+- **Audit Trail**: Complete history of all state changes and operations
+
+### Business Intelligence
+
+- **Dashboard Analytics**: Real-time statistics by state for informed decision-making
+- **Performance Tracking**: Monitor guide flow through the logistics pipeline
+- **Bottleneck Identification**: Quickly identify where guides are accumulating
+
+### User Experience
+
+- **Intuitive Interface**: Clean Material Design 3 UI with logical workflows
+- **Mobile-First**: Optimized for mobile device usage in warehouse environments
+- **Offline Support**: Continue operations even with intermittent connectivity
+- **Audio Feedback**: Sound notifications for scan operations and validations
+
+## Getting Started
+
+Ready to begin using GBI Logistics? Follow these guides:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Get up and running quickly with a step-by-step walkthrough of your first operations.
+  </Card>
+  
+  <Card title="Installation Guide" icon="download" href="/installation">
+    Set up the development environment and build the application for Android or iOS.
+  </Card>
+</CardGroup>
+
+## API Configuration
+
+GBI Logistics connects to the GBI Logistics backend API:
+
+```dart
+// Development Environment
+static const String devBaseUrl = 'http://100.104.120.121:81';
+
+// Production Environment  
+static const String prodBaseUrl = 'https://internalapi.gbilogistics.net';
+```
+
+<Info>
+  The application automatically handles token refresh every 15 minutes and will refresh tokens 30 minutes before expiration.
+</Info>
+
+## Technical Highlights
+
+### Security Features
+
+- **JWT Authentication**: Secure token-based authentication with automatic refresh
+- **Secure Storage**: Encrypted storage for tokens and sensitive credentials
+- **Session Management**: Automatic session validation and lifecycle management
+- **API Version Control**: Built-in version checking with update enforcement
+
+### Performance Optimizations
+
+- **Efficient State Management**: Provider pattern with selective rebuilds
+- **Pagination**: All list views use paginated API calls to reduce data transfer
+- **Caching**: Strategic caching of dashboard and cube data
+- **Batch Processing**: Efficient bulk operations for guides and cubes
+
+## Support & Documentation
+
+For detailed information about specific aspects of the system:
+
+- **API Reference**: Complete API endpoint documentation
+- **Component Library**: UI component usage and customization
+- **State Flow**: Detailed state transition rules and validation
+- **Development Guide**: Setup, standards, and contribution guidelines
+
+## Next Steps
+
+<Steps>
+  <Step title="Read the Quick Start Guide">
+    Learn how to log in and perform your first transport cube operation. [Go to Quick Start →](/quickstart)
+  </Step>
+  
+  <Step title="Set Up Development Environment">
+    If you need to build or customize the app, follow the installation guide. [Go to Installation →](/installation)
+  </Step>
+  
+  <Step title="Explore Features">
+    Dive deep into specific features and workflows in the Features section.
+  </Step>
+</Steps>

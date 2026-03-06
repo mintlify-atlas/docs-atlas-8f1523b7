@@ -1,0 +1,588 @@
+---
+title: 'Contributing'
+description: 'Guidelines for contributing to GBI Logistics'
+icon: 'code-branch'
+---
+
+## Welcome Contributors
+
+Thank you for your interest in contributing to GBI Logistics! This guide will help you understand our development workflow, coding standards, and contribution process.
+
+## Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have:
+
+- Flutter SDK (latest stable version)
+- Dart SDK (comes with Flutter)
+- IDE with Flutter support (VS Code or Android Studio)
+- Git for version control
+- Access to the project repository
+
+### Setting Up Development Environment
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone <repository-url>
+    cd gbi-logistics
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    flutter pub get
+    ```
+  </Step>
+  
+  <Step title="Configure Environment">
+    Set the development flag in `lib/core/config/api_config.dart`:
+    ```dart
+    static const bool isDevelopment = true;
+    ```
+  </Step>
+  
+  <Step title="Run the Application">
+    ```bash
+    flutter run
+    ```
+  </Step>
+</Steps>
+
+## Code Style Guidelines
+
+### Naming Conventions
+
+Follow these naming patterns consistently:
+
+<CodeGroup>
+```dart Classes
+// PascalCase for class names
+class TransportCubeService {}
+class ApiResponse<T> {}
+class GuideValidationProvider {}
+```
+
+```dart Methods & Variables
+// camelCase for methods and variables
+void createTransportCube() {}
+final String packageCode = 'ABC123';
+int get totalGuides => _guides.length;
+```
+
+```dart Constants
+// camelCase for const values (Dart convention)
+static const String version = '1.0';
+static const Duration refreshTokenBeforeExpiry = Duration(minutes: 30);
+
+// SCREAMING_SNAKE_CASE for enum-like constants if needed
+static const String CREATED = 'Created';
+```
+
+```dart Private Members
+// Prefix with underscore
+final HttpService _http;
+bool _isLoading = false;
+void _restoreSession() {}
+```
+</CodeGroup>
+
+### File Organization
+
+```
+lib/
+├── core/                    # Core functionality
+│   ├── config/             # Configuration files
+│   ├── models/             # Base models
+│   ├── services/           # Core services
+│   └── observers/          # Lifecycle observers
+└── features/               # Feature modules
+    └── logistics/
+        ├── models/         # Domain models
+        ├── services/       # Business logic services
+        ├── providers/      # State management (Provider pattern)
+        ├── screens/        # Full screen widgets
+        ├── widgets/        # Reusable UI components
+        └── presentation/   # UI helpers and widgets
+            ├── helpers/    # UI utility functions
+            └── widgets/    # Presentation widgets
+```
+
+### Documentation
+
+Document your code thoroughly:
+
+<CodeGroup>
+```dart Class Documentation
+/// Service for managing transport cubes
+/// 
+/// Handles CRUD operations for transport cubes including:
+/// - Creating new cubes
+/// - Changing cube states
+/// - Moving guides between cubes
+class TransportCubeService {
+  // ...
+}
+```
+
+```dart Method Documentation
+/// Changes the state of one or more transport cubes
+/// 
+/// @param request Contains cube IDs and new state
+/// @returns ApiResponse with operation result
+/// @throws ApiError if state transition is invalid
+Future<ApiResponse<void>> changeTransportCubesState(
+  ChangeTranportCubesStateRequest request,
+) async {
+  // ...
+}
+```
+
+```dart Property Documentation
+/// Token refresh interval in minutes
+/// 
+/// The app checks token validity every 15 minutes
+static const tokenCheckInterval = Duration(minutes: 15);
+```
+</CodeGroup>
+
+### Code Formatting
+
+Use `dart format` to automatically format code:
+
+```bash
+dart format lib/
+```
+
+<Info>
+Most IDEs can format on save. Enable this in your editor settings.
+</Info>
+
+## Git Workflow
+
+### Branch Naming Conventions
+
+Use descriptive branch names following these patterns:
+
+| Type | Pattern | Example |
+|------|---------|----------|
+| Feature | `feature/<description>` | `feature/add-cube-filtering` |
+| Bug Fix | `bugfix/<description>` | `bugfix/fix-token-refresh` |
+| Hotfix | `hotfix/<description>` | `hotfix/critical-auth-issue` |
+| Refactor | `refactor/<description>` | `refactor/improve-error-handling` |
+| Documentation | `docs/<description>` | `docs/update-api-reference` |
+
+### Creating a Branch
+
+```bash
+# Create and switch to new branch
+git checkout -b feature/my-new-feature
+
+# Or for bug fixes
+git checkout -b bugfix/fix-specific-issue
+```
+
+## Commit Message Format
+
+Write clear, descriptive commit messages:
+
+### Format
+
+```
+<type>: <subject>
+
+<body>
+
+<footer>
+```
+
+### Types
+
+- `feat`: New feature
+- `fix`: Bug fix
+- `refactor`: Code refactoring (no functional changes)
+- `docs`: Documentation changes
+- `style`: Code style changes (formatting, etc.)
+- `test`: Adding or updating tests
+- `chore`: Build process or auxiliary tool changes
+
+### Examples
+
+<CodeGroup>
+```text Feature
+feat: add cube state filtering to transport list
+
+Implemented state-based filtering for transport cubes.
+Users can now filter cubes by Created, Sent, Downloading,
+and Downloaded states.
+
+Closes #123
+```
+
+```text Bug Fix
+fix: resolve token refresh infinite loop
+
+Fixed issue where token refresh would trigger repeatedly
+when the refresh endpoint returned an error.
+
+Now properly handles refresh failures and logs user out
+after max retry attempts.
+
+Fixes #456
+```
+
+```text Refactor
+refactor: extract message display logic to helper
+
+Moved all message display code to MessageHelper class
+for better code reuse and consistency.
+
+- Created MessageHelper.showFromResponse()
+- Updated all screens to use new helper
+- Removed duplicate message display code
+```
+</CodeGroup>
+
+### Commit Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Write Clear Subjects" icon="heading">
+    Keep subject line under 50 characters. Use imperative mood ("add" not "added").
+  </Card>
+  
+  <Card title="Explain the Why" icon="message">
+    Body should explain why the change was made, not what changed (code shows that).
+  </Card>
+  
+  <Card title="Reference Issues" icon="link">
+    Include issue numbers like "Closes #123" or "Fixes #456".
+  </Card>
+  
+  <Card title="Atomic Commits" icon="atom">
+    Each commit should be a single logical change.
+  </Card>
+</CardGroup>
+
+## Pull Request Process
+
+### Before Creating a PR
+
+<Steps>
+  <Step title="Update Your Branch">
+    ```bash
+    git checkout main
+    git pull origin main
+    git checkout your-branch
+    git rebase main
+    ```
+  </Step>
+  
+  <Step title="Run Tests">
+    ```bash
+    flutter test
+    ```
+    Ensure all tests pass before submitting.
+  </Step>
+  
+  <Step title="Format Code">
+    ```bash
+    dart format lib/
+    ```
+  </Step>
+  
+  <Step title="Review Changes">
+    ```bash
+    git diff main
+    ```
+    Double-check all changes are intentional.
+  </Step>
+</Steps>
+
+### Creating a Pull Request
+
+1. **Push your branch**:
+   ```bash
+   git push origin feature/my-new-feature
+   ```
+
+2. **Create PR on GitHub/GitLab** with this template:
+
+```markdown
+## Summary
+
+Brief description of what this PR does.
+
+## Changes
+
+- Added X functionality
+- Fixed Y bug
+- Refactored Z component
+
+## Testing
+
+- [ ] Tested on Android
+- [ ] Tested on iOS
+- [ ] All tests passing
+- [ ] No new warnings
+
+## Screenshots (if applicable)
+
+[Include before/after screenshots for UI changes]
+
+## Related Issues
+
+Closes #123
+Related to #456
+```
+
+### PR Review Process
+
+<AccordionGroup>
+  <Accordion title="Code Review Checklist">
+    Reviewers will check for:
+    - Code follows style guidelines
+    - Adequate documentation
+    - No unnecessary complexity
+    - Proper error handling
+    - Performance considerations
+    - Security best practices
+  </Accordion>
+  
+  <Accordion title="Addressing Feedback">
+    - Respond to all comments
+    - Make requested changes
+    - Push new commits (don't force push during review)
+    - Mark conversations as resolved when addressed
+  </Accordion>
+  
+  <Accordion title="Merging">
+    - Squash commits if requested
+    - Ensure CI passes
+    - Wait for required approvals
+    - Maintainer will merge when ready
+  </Accordion>
+</AccordionGroup>
+
+## Testing Requirements
+
+### Unit Tests
+
+Write unit tests for:
+- Service methods
+- Model fromJson/toJson methods
+- Provider state changes
+- Helper functions
+
+```dart test/services/transport_cube_service_test.dart
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  group('TransportCubeService', () {
+    test('creates transport cube successfully', () async {
+      // Arrange
+      final service = TransportCubeService(mockHttp);
+      final request = NewTransportCubeRequest(guideIds: [1, 2]);
+      
+      // Act
+      final response = await service.createTransportCube(request);
+      
+      // Assert
+      expect(response.isSuccessful, true);
+      expect(response.content?.id, isNotNull);
+    });
+  });
+}
+```
+
+### Widget Tests
+
+Test UI components:
+
+```dart test/widgets/guide_counter_test.dart
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  testWidgets('GuideCounter displays correct count', (tester) async {
+    // Build widget
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GuideCounter(count: 5, state: 'Created'),
+      ),
+    );
+    
+    // Verify
+    expect(find.text('5'), findsOneWidget);
+  });
+}
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+flutter test
+
+# Run specific test file
+flutter test test/services/transport_cube_service_test.dart
+
+# Run tests with coverage
+flutter test --coverage
+```
+
+## Code Review Guidelines
+
+### For Contributors
+
+- Keep PRs focused and small
+- Respond to feedback promptly
+- Be open to suggestions
+- Ask questions if feedback is unclear
+
+### For Reviewers
+
+- Be respectful and constructive
+- Explain the "why" behind suggestions
+- Approve when code meets standards
+- Test the changes locally if needed
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Immutable Models" icon="lock">
+    Use `@immutable` and `final` for model classes:
+    ```dart
+    @immutable
+    class Guide {
+      final String packageCode;
+      const Guide({required this.packageCode});
+    }
+    ```
+  </Card>
+  
+  <Card title="Error Handling" icon="shield">
+    Always handle errors gracefully:
+    ```dart
+    try {
+      await operation();
+    } catch (e) {
+      AppLogger.error('Failed', error: e);
+      MessageHelper.showError(context, e);
+    }
+    ```
+  </Card>
+  
+  <Card title="Null Safety" icon="check">
+    Leverage Dart's null safety:
+    ```dart
+    String? optionalValue;
+    final String required = value ?? 'default';
+    ```
+  </Card>
+  
+  <Card title="Use Providers" icon="share-nodes">
+    Manage state with Provider pattern:
+    ```dart
+    final auth = Provider.of<AuthProvider>(
+      context,
+      listen: false,
+    );
+    ```
+  </Card>
+</CardGroup>
+
+## Common Patterns
+
+### API Service Pattern
+
+```dart
+class MyService {
+  final HttpService _http;
+  
+  MyService(this._http);
+  
+  Future<ApiResponse<MyData>> fetchData() async {
+    return _http.get<MyData>(
+      ApiEndpoints.myEndpoint,
+      (json) => MyData.fromJson(json['content']),
+      queryParams: {'version': ApiConfig.version},
+    );
+  }
+}
+```
+
+### Provider Pattern
+
+```dart
+class MyProvider extends ChangeNotifier {
+  bool _isLoading = false;
+  String? _error;
+  
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  
+  Future<void> doSomething() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      await _performOperation();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+```
+
+### Message Display Pattern
+
+```dart
+// Show API response message
+MessageHelper.showFromResponse(context, response);
+
+// Show success
+MessageHelper.showSuccessSnackBar(context, 'Success!');
+
+// Show error
+MessageHelper.showErrorSnackBar(context, 'Error occurred');
+
+// Blocking error dialog
+await MessageHelper.showBlockingErrorDialog(context, 'Critical error');
+```
+
+## Getting Help
+
+If you need help:
+
+1. Check existing documentation
+2. Review similar code in the project
+3. Ask in team chat or discussions
+4. Tag maintainers in your PR for guidance
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Flutter Documentation" icon="book" href="https://docs.flutter.dev">
+    Official Flutter docs and guides
+  </Card>
+  
+  <Card title="Dart Style Guide" icon="code" href="https://dart.dev/guides/language/effective-dart/style">
+    Effective Dart style guidelines
+  </Card>
+  
+  <Card title="Configuration" icon="gear" href="/resources/configuration">
+    Project configuration guide
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/resources/troubleshooting">
+    Common issues and solutions
+  </Card>
+</CardGroup>
+
+## Thank You!
+
+Your contributions help make GBI Logistics better for everyone. We appreciate your time and effort in improving this project.

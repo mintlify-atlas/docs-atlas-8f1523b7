@@ -1,0 +1,354 @@
+---
+title: 'Managing Guides in Cubes'
+description: 'Operations for managing guides within transport cubes'
+icon: 'list-check'
+---
+
+## Overview
+
+Once guides are organized into transport cubes, you can perform various management operations including viewing details, changing states, and dispatching to clients or subcouriers.
+
+## Viewing Cube Details
+
+### Accessing Cube Information
+
+1. Navigate to the appropriate cube list screen
+2. Tap the **cube card** or **eye icon** (👁)
+3. The details screen displays complete cube information
+
+### Cube Detail Screen Layout
+
+The details screen shows:
+
+**Cube Information Card:**
+- **Estado actual** (Current state) with colored badge
+- **Tipo de cubo** (Cube type)
+- **Fecha de registro** (Registration date and time)
+- **Creado por** (Operator name who created it)
+- **Guide counter** showing total and processed counts
+
+**Guide List:**
+- All guides contained in the cube
+- Each guide shows:
+  - Package code
+  - Current state indicator
+  - Visual status badge
+
+<Tip>
+Pull down on the details screen to refresh and see the latest guide states.
+</Tip>
+
+## Cube States and Workflows
+
+### State Progression
+
+Cubes move through different states based on operations:
+
+<Steps>
+  <Step title="Created (Creado)">
+    Initial state after cube creation. Cubes contain guides from customs dispatch.
+    
+    **Available actions:**
+    - View details
+    - Select multiple cubes
+    - Change state to "Sent"
+  </Step>
+  
+  <Step title="Sent (Enviado)">
+    Cube is in transit to the warehouse.
+    
+    **Available actions:**
+    - View details
+    - Select multiple cubes
+    - Change state to "Downloading"
+  </Step>
+  
+  <Step title="Downloading (Descargando)">
+    Cube is being received and processed at warehouse.
+    
+    **Available actions:**
+    - View details
+    - Scan guides for reception
+    - Process individual guides
+  </Step>
+  
+  <Step title="Downloaded (Descargado)">
+    Cube has been fully received and processed.
+    
+    **Available actions:**
+    - View details
+    - Prepare for client dispatch
+    - Generate reports
+  </Step>
+</Steps>
+
+## Working with Guides in Cubes
+
+### Viewing Guide Status
+
+Each guide in a cube can have one of two states:
+
+**Entered (Ingresada):**
+- ✓ Green checkmark icon
+- Guide has been added to the cube
+- Default state for newly added guides
+
+**Extracted (Extraída):**
+- ○ Red remove icon
+- Guide has been removed or dispatched
+- Indicates guide has left the cube
+
+### Guide Progress Counter
+
+The guide counter shows:
+```
+Processed: X / Total: Y
+```
+
+- **Total** - All guides in the cube
+- **Processed** - Guides that have been extracted
+- **Progress bar** visual indicator
+
+<Note>
+The counter helps you track cube processing completion at a glance.
+</Note>
+
+## Selecting Multiple Cubes
+
+For batch operations on cubes in **Created** or **Sent** states:
+
+### Selection Process
+
+1. Tap on a **cube card** (anywhere except the eye icon)
+2. Card displays a **blue border** indicating selection
+3. Tap additional cubes to select multiple
+4. Tap again to deselect
+
+### Batch Operations Available
+
+With cubes selected:
+
+**Change State:**
+- Move all selected cubes to the next state
+- Useful for processing multiple cubes simultaneously
+
+**Close Cubes:**
+- Finalize cube processing
+- Available only if cubes allow closing
+
+**Dispatch:**
+- Send cubes to subcourier or client
+- Only for dispatch-type cubes
+
+<Warning>
+Batch operations cannot be undone. Verify your selection before proceeding.
+</Warning>
+
+## Changing Cube States
+
+### Single Cube State Change
+
+1. Open the cube details screen
+2. Tap the appropriate action button
+3. Confirm the state change
+4. Wait for server confirmation
+
+### Multiple Cube State Change
+
+1. Select cubes from the list (tap card)
+2. Tap the state change button at the bottom
+3. Confirm the batch operation
+4. System processes all selected cubes
+5. Success message displays
+
+### State Change Validation
+
+The system validates:
+- Current state allows the transition
+- All guides in cubes are valid
+- User has permission for the operation
+- Business rules are satisfied
+
+## Dispatching Operations
+
+### Dispatch to Client
+
+For cubes of type "ToDispatchToClient":
+
+1. Select one or more cubes
+2. Verify cube type allows dispatch
+3. Tap **"Despachar a Cliente"** button
+4. System validates all guides
+5. Confirmation dialog appears
+6. Approve dispatch
+7. Guides are marked as dispatched
+
+### Dispatch to Subcourier
+
+For cubes of type "ToDispatchToSubcourier":
+
+1. Select destination subcourier
+2. Choose cubes to dispatch
+3. Initiate dispatch operation
+4. System processes transfer
+5. Subcourier receives notification
+
+<Note>
+Dispatched guides automatically update their status and become visible to the receiving party.
+</Note>
+
+## Closing Cubes
+
+Cubes can be closed when processing is complete:
+
+### Close Conditions
+
+- All guides must be processed
+- Cube state must allow closing
+- `allowClose` flag must be true
+- User has appropriate permissions
+
+### Close Process
+
+1. Select cubes to close
+2. Tap **"Cerrar Cubos"** button
+3. System validates close conditions
+4. Confirmation dialog appears
+5. Approve closing
+6. Cubes are finalized
+
+<Warning>
+Closed cubes cannot be reopened. Ensure all operations are complete before closing.
+</Warning>
+
+## Filtering and Searching
+
+### Filter by State
+
+Use the state filter tabs at the top:
+
+1. Tap a state tab (Created, Sent, etc.)
+2. List updates to show only cubes in that state
+3. Selection is cleared when changing states
+4. Pull to refresh to update the filtered list
+
+### Empty State Handling
+
+When no cubes exist in the selected state:
+- 📥 Inbox icon appears
+- "No hay cubos en este estado" message
+- Pull down to refresh and check again
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Efficient Cube Management">
+    - **Process cubes in order** - First in, first out (FIFO)
+    - **Monitor progress** - Check processed/total counters
+    - **Batch similar operations** - Use multi-select for efficiency
+    - **Complete workflows** - Don't leave cubes in intermediate states
+    - **Verify before dispatch** - Double-check cube contents
+  </Accordion>
+
+  <Accordion title="State Management">
+    - **Advance states promptly** - Don't accumulate in Created state
+    - **Track transit times** - Monitor Sent state duration
+    - **Process systematically** - Complete Downloading before moving on
+    - **Clean up regularly** - Close processed cubes promptly
+  </Accordion>
+
+  <Accordion title="Working with Large Cubes">
+    - **Break into batches** - Easier to manage than one large cube
+    - **Process incrementally** - Don't try to complete all at once
+    - **Monitor performance** - Large cubes may load slower
+    - **Use filters** - Focus on specific subsets of guides
+  </Accordion>
+
+  <Accordion title="Error Recovery">
+    - **Note cube ID** - Important for support tickets
+    - **Document errors** - Screenshot error messages
+    - **Don't duplicate work** - Check cube state before retrying
+    - **Contact support** - For persistent issues with specific cubes
+  </Accordion>
+</AccordionGroup>
+
+## Understanding Guide States
+
+### Within Cube Context
+
+Guides have local states within cubes:
+
+- **Entered** - Guide is currently in the cube
+- **Extracted** - Guide has been removed
+
+These are separate from the guide's global status in the system.
+
+### Global Guide Status
+
+Simultaneously, guides have system-wide statuses:
+
+- Despachado de Aduana
+- Tránsito a Bodega
+- Recibido en Bodega Local
+- Listo para Entrega
+
+See [Dashboard Overview](/guide/dashboard) for complete status definitions.
+
+## Troubleshooting
+
+### Can't Select Cubes
+
+**Issue:** Tapping cube cards doesn't show selection border
+
+**Solutions:**
+- Verify you're in Created or Sent state
+- Downloaded cubes open details instead of selecting
+- Try tapping center of card, not eye icon
+- Refresh the list and try again
+
+### State Change Failed
+
+**Issue:** "Error al cambiar estado" message
+
+**Solutions:**
+- Check internet connection
+- Verify cube is in correct current state
+- Ensure all guides in cube are valid
+- Review error message details
+- Try again after refreshing
+
+### Guide Count Mismatch
+
+**Issue:** Counter shows unexpected values
+
+**Solutions:**
+- Pull down to refresh the details
+- Check if guides were processed elsewhere
+- Verify guide statuses individually
+- Contact support with cube ID
+
+### Dispatch Button Disabled
+
+**Issue:** Can't initiate dispatch operation
+
+**Solutions:**
+- Verify cube type allows dispatch
+- Check that cubes are selected
+- Ensure you're in correct state tab
+- Confirm user permissions
+
+### Cube Details Won't Load
+
+**Issue:** Loading spinner continues indefinitely
+
+**Solutions:**
+- Check internet connection
+- Navigate back and try again
+- Restart the app
+- Contact support with cube ID
+
+## Related Sections
+
+- [Creating Transport Cubes](/guide/creating-cubes)
+- [Validation Scanning](/guide/validation-scanning)
+- [Dashboard Overview](/guide/dashboard)

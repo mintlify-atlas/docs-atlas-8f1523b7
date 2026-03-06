@@ -1,0 +1,197 @@
+---
+title: "Cube States"
+description: "Transport cube state definitions and lifecycle"
+---
+
+## Overview
+
+The `TransportCubeState` class defines all possible states in a transport cube's lifecycle, from creation to final dispatch.
+
+## States
+
+Transport cubes follow a defined lifecycle with these states:
+
+### Created
+
+- **Value**: `"Created"`
+- **Label**: `"Creado"`
+- **Color**: `0xFF1976D2` (Blue)
+- **Icon**: `Icons.local_shipping`
+- **Description**: Initial state when cube is created at customs dispatch
+
+### Sent
+
+- **Value**: `"Sent"`
+- **Label**: `"Enviado"`
+- **Color**: `0xFFF57C00` (Orange)
+- **Icon**: `Icons.directions_run`
+- **Description**: Cube is in transit to warehouse
+
+### Downloading
+
+- **Value**: `"Downloading"`
+- **Label**: `"Descargando"`
+- **Color**: `0xFF7B1FA2` (Purple)
+- **Icon**: `Icons.downloading`
+- **Description**: Cube is being received at warehouse
+
+### Downloaded
+
+- **Value**: `"Downloaded"`
+- **Label**: `"Descargado"`
+- **Color**: `0xFF2E7D32` (Green)
+- **Icon**: `Icons.check_circle`
+- **Description**: Cube is ready for client dispatch
+
+## Code Reference
+
+```dart
+import 'package:flutter/material.dart';
+
+class TransportCubeState {
+  // State constants
+  static const String created = 'Created';
+  static const String sent = 'Sent';
+  static const String downloading = 'Downloading';
+  static const String downloaded = 'Downloaded';
+
+  // All possible states
+  static const List<String> values = [
+    created,
+    sent,
+    downloading,
+    downloaded,
+  ];
+
+  // Get localized label
+  static String getLabel(String state) {
+    switch (state) {
+      case created:
+        return 'Creado';
+      case sent:
+        return 'Enviado';
+      case downloading:
+        return 'Descargando';
+      case downloaded:
+        return 'Descargado';
+      default:
+        return 'Desconocido';
+    }
+  }
+
+  // Get color for UI
+  static int getColor(String state) {
+    switch (state) {
+      case created:
+        return 0xFF1976D2; // Blue
+      case sent:
+        return 0xFFF57C00; // Orange
+      case downloading:
+        return 0xFF7B1FA2; // Purple
+      case downloaded:
+        return 0xFF2E7D32; // Green
+      default:
+        return 0xFF9E9E9E; // Gray
+    }
+  }
+
+  // Get icon for UI
+  static IconData getIcon(String state) {
+    switch (state) {
+      case created:
+        return Icons.local_shipping;
+      case sent:
+        return Icons.directions_run;
+      case downloading:
+        return Icons.downloading;
+      case downloaded:
+        return Icons.check_circle;
+      default:
+        return Icons.info_outline;
+    }
+  }
+}
+```
+
+## Usage Examples
+
+### Get State Label
+
+```dart
+final state = 'Sent';
+final label = TransportCubeState.getLabel(state);
+print(label); // "Enviado"
+```
+
+### Display State Badge
+
+```dart
+Widget buildStateBadge(String state) {
+  return Container(
+    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    decoration: BoxDecoration(
+      color: Color(TransportCubeState.getColor(state)),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          TransportCubeState.getIcon(state),
+          color: Colors.white,
+          size: 16,
+        ),
+        SizedBox(width: 4),
+        Text(
+          TransportCubeState.getLabel(state),
+          style: TextStyle(color: Colors.white),
+        ),
+      ],
+    ),
+  );
+}
+```
+
+### Validate State
+
+```dart
+bool isValidState(String state) {
+  return TransportCubeState.values.contains(state);
+}
+```
+
+## State Transitions
+
+Typical state flow:
+
+```
+Created → Sent → Downloading → Downloaded
+```
+
+1. **Created**: Cube is created with initial guides
+2. **Sent**: Cube is sent from customs to warehouse
+3. **Downloading**: Cube arrives and is being processed at warehouse
+4. **Downloaded**: All guides are processed and ready for final dispatch
+
+## API Integration
+
+When changing cube states via the API:
+
+```dart
+// Change cube state
+final request = ChangeTranportCubesStateRequest(
+  transportCubeIds: [cubeId],
+  newState: TransportCubeState.sent,
+);
+
+final response = await transportCubeService.changeTransportCubesState(request);
+if (response.isSuccessful) {
+  print('State changed successfully');
+}
+```
+
+## Related
+
+- [Transport Cube Models](/models/transport-cube) - Cube data structures
+- [Cube Types](/models/cube-types) - Types of transport cubes
+- [TransportCubeService](/services/transport-cube-service) - Service for state changes

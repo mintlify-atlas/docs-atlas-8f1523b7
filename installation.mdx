@@ -1,0 +1,890 @@
+---
+title: Installation Guide
+description: Complete guide to setting up the GBI Logistics Flutter development environment, building the app, and deploying to Android and iOS devices
+---
+
+# Installation Guide
+
+This comprehensive guide covers everything you need to set up, build, and run GBI Logistics on your local development environment.
+
+<Warning>
+  This guide is for developers who need to build, customize, or deploy the application. End users should receive pre-built APK/IPA files from their IT department.
+</Warning>
+
+## Prerequisites
+
+Before you begin, ensure your system meets these requirements:
+
+### System Requirements
+
+<CardGroup cols={2}>
+  <Card title="Operating System">
+    - **macOS**: 10.14 (Mojave) or later (required for iOS development)
+    - **Windows**: Windows 10 or later (64-bit)
+    - **Linux**: Ubuntu 18.04 or later (64-bit)
+  </Card>
+  
+  <Card title="Hardware">
+    - **RAM**: Minimum 8GB (16GB recommended)
+    - **Storage**: 10GB free space for Flutter SDK and tools
+    - **CPU**: Intel Core i5 or equivalent
+  </Card>
+</CardGroup>
+
+### Required Software
+
+- **Flutter SDK**: Version 3.0.0 or higher
+- **Dart SDK**: Included with Flutter (3.0.0 or higher)
+- **Git**: For version control and cloning the repository
+- **IDE**: Visual Studio Code or Android Studio (recommended)
+
+### Platform-Specific Requirements
+
+#### Android Development
+
+- Android Studio (latest stable version)
+- Android SDK (API level 21 or higher)
+- Android SDK Platform-Tools
+- Android SDK Build-Tools
+- Android Emulator or physical Android device
+- Java Development Kit (JDK) 11 or higher
+
+#### iOS Development (macOS only)
+
+- Xcode 13.0 or higher
+- Xcode Command Line Tools
+- CocoaPods (installed via Homebrew)
+- iOS Simulator or physical iOS device
+- Apple Developer account (for device deployment)
+
+## Step 1: Install Flutter SDK
+
+<Steps>
+  <Step title="Download Flutter SDK">
+    Download the Flutter SDK for your operating system:
+    
+    **macOS (Intel):**
+    ```bash
+    curl -O https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.16.0-stable.zip
+    unzip flutter_macos_3.16.0-stable.zip
+    ```
+    
+    **macOS (Apple Silicon):**
+    ```bash
+    curl -O https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.16.0-stable.zip
+    unzip flutter_macos_arm64_3.16.0-stable.zip
+    ```
+    
+    **Linux:**
+    ```bash
+    wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.16.0-stable.tar.xz
+    tar xf flutter_linux_3.16.0-stable.tar.xz
+    ```
+    
+    **Windows:**
+    Download from [flutter.dev](https://docs.flutter.dev/get-started/install/windows) and extract to `C:\src\flutter`
+  </Step>
+  
+  <Step title="Add Flutter to PATH">
+    Add Flutter to your system PATH:
+    
+    **macOS/Linux (bash):**
+    ```bash
+    export PATH="$PATH:`pwd`/flutter/bin"
+    echo 'export PATH="$PATH:[PATH_TO_FLUTTER_DIRECTORY]/flutter/bin"' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+    
+    **macOS (zsh):**
+    ```bash
+    export PATH="$PATH:`pwd`/flutter/bin"
+    echo 'export PATH="$PATH:[PATH_TO_FLUTTER_DIRECTORY]/flutter/bin"' >> ~/.zshrc
+    source ~/.zshrc
+    ```
+    
+    **Windows:**
+    1. Search for "Environment Variables" in Windows settings
+    2. Edit the `Path` variable
+    3. Add `C:\src\flutter\bin`
+    4. Click OK and restart your terminal
+  </Step>
+  
+  <Step title="Verify Installation">
+    Verify Flutter is correctly installed:
+    
+    ```bash
+    flutter --version
+    ```
+    
+    Expected output:
+    ```
+    Flutter 3.16.0 • channel stable
+    Framework • revision db7ef5bf9f (2 weeks ago) • 2023-11-15 11:25:44 -0800
+    Engine • revision 74d16627b9
+    Tools • Dart 3.2.0 • DevTools 2.28.2
+    ```
+  </Step>
+  
+  <Step title="Run Flutter Doctor">
+    Run Flutter Doctor to check for any missing dependencies:
+    
+    ```bash
+    flutter doctor
+    ```
+    
+    This will check:
+    - ✓ Flutter SDK installation
+    - ✓ Android toolchain (for Android development)
+    - ✓ Xcode (for iOS development, macOS only)
+    - ✓ Chrome (for web development)
+    - ✓ Connected devices
+    - ✓ IDE plugins
+    
+    <Note>
+      You may see warnings about missing optional components. Focus on fixing issues for your target platform (Android or iOS).
+    </Note>
+  </Step>
+</Steps>
+
+## Step 2: Set Up Android Development
+
+<Steps>
+  <Step title="Install Android Studio">
+    Download and install Android Studio from [developer.android.com](https://developer.android.com/studio).
+    
+    During installation, ensure these components are selected:
+    - Android SDK
+    - Android SDK Platform
+    - Android Virtual Device
+  </Step>
+  
+  <Step title="Configure Android SDK">
+    Open Android Studio and navigate to:
+    
+    ```
+    Android Studio > Preferences > Appearance & Behavior > System Settings > Android SDK
+    ```
+    
+    Install the following:
+    - **SDK Platforms**: Android 5.0 (API 21) and higher
+    - **SDK Tools**: 
+      - Android SDK Build-Tools
+      - Android SDK Platform-Tools
+      - Android SDK Tools
+      - Android Emulator
+  </Step>
+  
+  <Step title="Accept Android Licenses">
+    Accept all Android SDK licenses:
+    
+    ```bash
+    flutter doctor --android-licenses
+    ```
+    
+    Type `y` to accept each license agreement.
+  </Step>
+  
+  <Step title="Create Android Emulator (Optional)">
+    If you don't have a physical Android device:
+    
+    1. Open Android Studio
+    2. Go to **Tools > Device Manager**
+    3. Click **Create Device**
+    4. Select a device definition (e.g., Pixel 5)
+    5. Download a system image (API 31 or higher recommended)
+    6. Complete the wizard
+    
+    Start the emulator:
+    ```bash
+    flutter emulators --launch <emulator_id>
+    ```
+  </Step>
+</Steps>
+
+## Step 3: Set Up iOS Development (macOS Only)
+
+<Steps>
+  <Step title="Install Xcode">
+    Install Xcode from the Mac App Store or download from [developer.apple.com](https://developer.apple.com/xcode/).
+    
+    Minimum version: Xcode 13.0
+  </Step>
+  
+  <Step title="Install Xcode Command Line Tools">
+    ```bash
+    sudo xcode-select --switch /Applications/Xcode.app/Contents/Developer
+    sudo xcodebuild -runFirstLaunch
+    ```
+  </Step>
+  
+  <Step title="Accept Xcode License">
+    ```bash
+    sudo xcodebuild -license accept
+    ```
+  </Step>
+  
+  <Step title="Install CocoaPods">
+    CocoaPods manages iOS dependencies:
+    
+    ```bash
+    sudo gem install cocoapods
+    pod setup
+    ```
+    
+    Or install via Homebrew:
+    ```bash
+    brew install cocoapods
+    ```
+  </Step>
+  
+  <Step title="Configure iOS Simulator">
+    Launch iOS Simulator:
+    
+    ```bash
+    open -a Simulator
+    ```
+    
+    Or use Flutter:
+    ```bash
+    flutter emulators --launch apple_ios_simulator
+    ```
+  </Step>
+</Steps>
+
+## Step 4: Install IDE and Extensions
+
+### Visual Studio Code (Recommended)
+
+<Steps>
+  <Step title="Install VS Code">
+    Download from [code.visualstudio.com](https://code.visualstudio.com/)
+  </Step>
+  
+  <Step title="Install Flutter Extension">
+    Install the official Flutter extension:
+    
+    1. Open VS Code
+    2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
+    3. Search for "Flutter"
+    4. Install "Flutter" by Dart Code (this also installs the Dart extension)
+  </Step>
+  
+  <Step title="Install Recommended Extensions">
+    Additional helpful extensions:
+    - **Dart**: Syntax highlighting and debugging
+    - **Pubspec Assist**: Dependency management
+    - **Flutter Widget Snippets**: Code snippets
+    - **Error Lens**: Inline error highlighting
+  </Step>
+</Steps>
+
+### Android Studio (Alternative)
+
+<Steps>
+  <Step title="Install Flutter Plugin">
+    1. Open Android Studio
+    2. Go to **Preferences > Plugins** (macOS) or **File > Settings > Plugins** (Windows/Linux)
+    3. Search for "Flutter" in the Marketplace
+    4. Install the Flutter plugin (this also installs Dart)
+    5. Restart Android Studio
+  </Step>
+</Steps>
+
+## Step 5: Clone the GBI Logistics Repository
+
+<Steps>
+  <Step title="Clone the Repository">
+    Clone the GBI Logistics source code:
+    
+    ```bash
+    git clone <repository-url> gbi-logistics
+    cd gbi-logistics
+    ```
+    
+    <Info>
+      Replace `<repository-url>` with your actual Git repository URL. Contact your system administrator if you don't have access.
+    </Info>
+  </Step>
+  
+  <Step title="Verify Project Structure">
+    Ensure the project structure matches:
+    
+    ```
+    gbi-logistics/
+    ├── android/
+    ├── ios/
+    ├── lib/
+    │   ├── core/
+    │   ├── features/
+    │   └── main.dart
+    ├── assets/
+    │   └── images/
+    ├── pubspec.yaml
+    └── README.md
+    ```
+  </Step>
+  
+  <Step title="Check Flutter Version">
+    Verify your Flutter version meets the requirements in `pubspec.yaml`:
+    
+    ```yaml
+    environment:
+      sdk: '>=3.0.0 <4.0.0'
+    ```
+    
+    Your Flutter version must be 3.0.0 or higher.
+  </Step>
+</Steps>
+
+## Step 6: Install Dependencies
+
+<Steps>
+  <Step title="Install Dart Packages">
+    Install all required dependencies from `pubspec.yaml`:
+    
+    ```bash
+    flutter pub get
+    ```
+    
+    This installs packages including:
+    - `provider` (^6.0.5) - State management
+    - `http` (^1.1.0) - HTTP requests
+    - `flutter_secure_storage` (^9.2.4) - Secure storage
+    - `intl` (^0.20.2) - Internationalization
+    - And more...
+  </Step>
+  
+  <Step title="Install iOS Pods (iOS only)">
+    If building for iOS, install CocoaPods dependencies:
+    
+    ```bash
+    cd ios
+    pod install
+    cd ..
+    ```
+    
+    <Note>
+      This step is only required for iOS development and must be run on macOS.
+    </Note>
+  </Step>
+  
+  <Step title="Verify Dependencies">
+    Verify all dependencies are correctly installed:
+    
+    ```bash
+    flutter doctor -v
+    ```
+    
+    Look for:
+    - ✓ All required dependencies installed
+    - ✓ No version conflicts
+    - ✓ Assets properly configured
+  </Step>
+</Steps>
+
+## Step 7: Configure the Application
+
+### API Configuration
+
+GBI Logistics uses different API endpoints for development and production.
+
+<Steps>
+  <Step title="Review API Configuration">
+    Open `lib/core/config/api_config.dart` and review the configuration:
+    
+    ```dart
+    class ApiConfig {
+      /// Development API URL
+      static const String devBaseUrl = 'http://100.104.120.121:81';
+      
+      /// Production API URL
+      static const String prodBaseUrl = 'https://internalapi.gbilogistics.net';
+      
+      /// Set to false for production builds
+      static const bool isDevelopment = true;
+      
+      /// Automatically selects the correct URL
+      static String get baseUrl => isDevelopment ? devBaseUrl : prodBaseUrl;
+    }
+    ```
+  </Step>
+  
+  <Step title="Configure for Your Environment">
+    **For Development:**
+    ```dart
+    static const bool isDevelopment = true;
+    ```
+    
+    **For Production:**
+    ```dart
+    static const bool isDevelopment = false;
+    ```
+    
+    <Warning>
+      Always set `isDevelopment = false` for production releases. Development endpoints may not be accessible outside your local network.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Network Access">
+    **Android:** The development URL uses HTTP (not HTTPS). Configure cleartext traffic:
+    
+    Verify `android/app/src/main/AndroidManifest.xml` includes:
+    ```xml
+    <application
+        android:usesCleartextTraffic="true"
+        ...>
+    ```
+    
+    **iOS:** Configure App Transport Security in `ios/Runner/Info.plist`:
+    ```xml
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    ```
+    
+    <Note>
+      These settings allow HTTP connections for development. Remove or restrict them for production builds.
+    </Note>
+  </Step>
+</Steps>
+
+### Version Configuration
+
+The app version is defined in `pubspec.yaml`:
+
+```yaml
+name: logiruta
+description: LogiRuta - Gestión Logística Inteligente
+version: 1.0.0+8  # Format: version+buildNumber
+```
+
+- **Version**: 1.0.0 (displayed to users)
+- **Build Number**: 8 (internal build number)
+
+<Info>
+  Increment the build number for each release. The version is displayed on the dashboard as "v1.0.0.8".
+</Info>
+
+## Step 8: Build and Run the Application
+
+### Running on Android
+
+<Steps>
+  <Step title="Connect Device or Start Emulator">
+    **Physical Device:**
+    1. Enable Developer Options on your Android device
+    2. Enable USB Debugging
+    3. Connect device via USB
+    4. Verify connection: `flutter devices`
+    
+    **Emulator:**
+    ```bash
+    flutter emulators --launch <emulator_id>
+    ```
+  </Step>
+  
+  <Step title="Run the App">
+    Run in debug mode:
+    ```bash
+    flutter run
+    ```
+    
+    Or specify the device:
+    ```bash
+    flutter run -d <device_id>
+    ```
+    
+    The app will:
+    - Build the application
+    - Install on the device/emulator
+    - Launch automatically
+    - Enable hot reload for development
+  </Step>
+  
+  <Step title="Build Release APK">
+    For production deployment:
+    
+    ```bash
+    flutter build apk --release
+    ```
+    
+    The APK will be generated at:
+    ```
+    build/app/outputs/flutter-apk/app-release.apk
+    ```
+    
+    For split APKs by architecture:
+    ```bash
+    flutter build apk --split-per-abi --release
+    ```
+  </Step>
+</Steps>
+
+### Running on iOS
+
+<Steps>
+  <Step title="Open Xcode Project">
+    ```bash
+    open ios/Runner.xcworkspace
+    ```
+    
+    <Warning>
+      Always open the `.xcworkspace` file, NOT the `.xcodeproj` file, as the project uses CocoaPods.
+    </Warning>
+  </Step>
+  
+  <Step title="Configure Signing">
+    In Xcode:
+    1. Select the Runner project in the navigator
+    2. Select the Runner target
+    3. Go to "Signing & Capabilities" tab
+    4. Select your Team
+    5. Xcode will automatically manage provisioning profiles
+  </Step>
+  
+  <Step title="Run on Simulator">
+    ```bash
+    flutter run -d "iPhone 14 Pro"
+    ```
+    
+    Or select the simulator in Xcode and press Run (Cmd+R)
+  </Step>
+  
+  <Step title="Run on Physical Device">
+    1. Connect your iOS device via USB
+    2. Trust the computer on your device
+    3. Select your device in Xcode or use:
+    ```bash
+    flutter run -d <device_id>
+    ```
+  </Step>
+  
+  <Step title="Build Release IPA">
+    For App Store or ad-hoc distribution:
+    
+    ```bash
+    flutter build ios --release
+    ```
+    
+    Then in Xcode:
+    1. Select "Any iOS Device" as the destination
+    2. Go to **Product > Archive**
+    3. Once archived, use the Organizer to export the IPA
+  </Step>
+</Steps>
+
+## Step 9: Verify Installation
+
+<Steps>
+  <Step title="Test Login">
+    1. Launch the app
+    2. You should see the GBI Logistics login screen
+    3. Enter test credentials (or contact admin for credentials)
+    4. Verify successful login and dashboard load
+  </Step>
+  
+  <Step title="Test API Connectivity">
+    Verify the app can connect to the backend:
+    - Dashboard should load statistics
+    - No network error messages
+    - Data displays correctly
+    
+    <Info>
+      Check the console logs for API requests and responses. All HTTP calls are logged by `HttpService`.
+    </Info>
+  </Step>
+  
+  <Step title="Test Core Features">
+    Verify essential functionality:
+    - ✓ Navigation between screens
+    - ✓ Cube list loading
+    - ✓ Guide scanning (if device has camera)
+    - ✓ State transitions
+    - ✓ Logout and re-login
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### Flutter Doctor Issues
+
+<Warning>
+  **Issue**: `cmdline-tools component is missing`
+  
+  **Solution**:
+  ```bash
+  # Install Android command-line tools via Android Studio
+  # Or use sdkmanager:
+  sdkmanager --install "cmdline-tools;latest"
+  ```
+</Warning>
+
+<Warning>
+  **Issue**: `CocoaPods not installed`
+  
+  **Solution**:
+  ```bash
+  sudo gem install cocoapods
+  # Or via Homebrew:
+  brew install cocoapods
+  ```
+</Warning>
+
+#### Build Errors
+
+<Warning>
+  **Issue**: `Gradle build failed` (Android)
+  
+  **Solutions**:
+  1. Clear Gradle cache:
+     ```bash
+     cd android
+     ./gradlew clean
+     cd ..
+     flutter clean
+     flutter pub get
+     ```
+  
+  2. Update Gradle wrapper:
+     ```bash
+     cd android
+     ./gradlew wrapper --gradle-version 7.6
+     ```
+  
+  3. Check `android/build.gradle` for correct Kotlin/Gradle versions
+</Warning>
+
+<Warning>
+  **Issue**: `Pod install failed` (iOS)
+  
+  **Solutions**:
+  1. Update CocoaPods repo:
+     ```bash
+     pod repo update
+     cd ios
+     pod install --repo-update
+     ```
+  
+  2. Clear CocoaPods cache:
+     ```bash
+     cd ios
+     rm -rf Pods Podfile.lock
+     pod install
+     ```
+  
+  3. Check Xcode version compatibility
+</Warning>
+
+#### Runtime Issues
+
+<Warning>
+  **Issue**: `SocketException: Failed to connect`
+  
+  **Solutions**:
+  - Verify API URL in `api_config.dart`
+  - Check network connectivity
+  - Ensure development API is accessible
+  - Verify cleartext traffic settings (Android)
+  - Check App Transport Security settings (iOS)
+</Warning>
+
+<Warning>
+  **Issue**: `PlatformException: flutter_secure_storage`
+  
+  **Solutions**:
+  - Ensure minimum SDK versions are met:
+    - Android: minSdkVersion 21 (in `android/app/build.gradle`)
+    - iOS: iOS 12.0 or later (in `ios/Podfile`)
+  - Clear app data and reinstall
+</Warning>
+
+#### Hot Reload Issues
+
+<Warning>
+  **Issue**: Hot reload not working or causing errors
+  
+  **Solutions**:
+  - Use hot restart instead: `R` in terminal or Shift+R
+  - Full restart: Stop app and `flutter run` again
+  - Clear build cache: `flutter clean`
+</Warning>
+
+### Debug Mode vs Release Mode
+
+**Debug Mode:**
+- Slower performance (includes debug symbols)
+- Hot reload enabled
+- Debug banner in UI
+- Verbose logging
+- Used for development
+
+**Release Mode:**
+- Optimized performance
+- No hot reload
+- No debug banner
+- Minimal logging
+- Used for production
+
+```bash
+# Debug
+flutter run
+
+# Profile (performance testing)
+flutter run --profile
+
+# Release
+flutter run --release
+```
+
+## Advanced Configuration
+
+### Custom Build Variants
+
+#### Android Build Types
+
+Modify `android/app/build.gradle` to create custom build variants:
+
+```gradle
+android {
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+        }
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled true
+            shrinkResources true
+        }
+        staging {
+            applicationIdSuffix ".staging"
+            debuggable false
+        }
+    }
+}
+```
+
+#### iOS Schemes
+
+Create custom schemes in Xcode for different environments:
+1. **Product > Scheme > Manage Schemes**
+2. Duplicate the Runner scheme
+3. Rename to "Runner-Staging"
+4. Configure build settings per scheme
+
+### Signing Configuration
+
+#### Android Signing
+
+Create `android/key.properties`:
+
+```properties
+storePassword=<store-password>
+keyPassword=<key-password>
+keyAlias=<key-alias>
+storeFile=<path-to-keystore>
+```
+
+Reference in `android/app/build.gradle`:
+
+```gradle
+android {
+    signingConfigs {
+        release {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+}
+```
+
+<Warning>
+  Never commit `key.properties` or keystore files to version control. Add them to `.gitignore`.
+</Warning>
+
+#### iOS Signing
+
+Configure automatic signing in Xcode or use manual provisioning profiles for enterprise distribution.
+
+## Performance Optimization
+
+### Build Size Optimization
+
+```bash
+# Analyze APK size
+flutter build apk --analyze-size --target-platform android-arm64
+
+# Build split APKs
+flutter build apk --split-per-abi
+
+# Build App Bundle (recommended for Play Store)
+flutter build appbundle
+```
+
+### Runtime Performance
+
+- Use `flutter run --profile` to measure performance
+- Enable Dart DevTools: `flutter pub global activate devtools`
+- Profile with: `flutter run --profile && dart devtools`
+
+## Continuous Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Build and Test
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.0'
+      - run: flutter pub get
+      - run: flutter test
+      - run: flutter build apk --release
+```
+
+## Next Steps
+
+Now that you have GBI Logistics installed and running:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+    Learn how to use the application and perform common operations.
+  </Card>
+  
+  <Card title="Architecture Overview" icon="diagram-project">
+    Understand the codebase structure and design patterns used.
+  </Card>
+  
+  <Card title="API Reference" icon="code">
+    Explore the backend API endpoints and data models.
+  </Card>
+  
+  <Card title="Contributing" icon="code-branch">
+    Learn how to contribute to the GBI Logistics project.
+  </Card>
+</CardGroup>
+
+## Additional Resources
+
+- **Flutter Documentation**: [docs.flutter.dev](https://docs.flutter.dev)
+- **Dart Language**: [dart.dev](https://dart.dev)
+- **Provider Package**: [pub.dev/packages/provider](https://pub.dev/packages/provider)
+- **Flutter Secure Storage**: [pub.dev/packages/flutter_secure_storage](https://pub.dev/packages/flutter_secure_storage)
+
+---
+
+<Note>
+  Keep your Flutter SDK updated regularly with `flutter upgrade` to get the latest features, performance improvements, and bug fixes.
+</Note>

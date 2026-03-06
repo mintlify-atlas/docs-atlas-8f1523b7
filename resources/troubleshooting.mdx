@@ -1,0 +1,370 @@
+---
+title: 'Troubleshooting'
+description: 'Common issues and solutions for GBI Logistics'
+icon: 'wrench'
+---
+
+## Common Issues
+
+This guide covers common problems you might encounter and their solutions.
+
+## Authentication Issues
+
+### Session Expired Error
+
+**Problem**: User receives "Session expired" or "Token invalid" messages.
+
+**Causes**:
+- Token has expired (error code 1)
+- Invalid token (error code 2)
+- Server-side session invalidation
+
+**Solutions**:
+
+<Steps>
+  <Step title="Automatic Token Refresh">
+    The app automatically refreshes tokens 30 minutes before expiry. If this fails, the user will be logged out.
+    ```dart lib/core/config/api_config.dart
+    static const refreshTokenBeforeExpiry = Duration(minutes: 30);
+    ```
+  </Step>
+  
+  <Step title="Silent Re-login">
+    The `AuthProvider` attempts silent re-login using stored credentials:
+    ```dart lib/features/logistics/providers/auth_provider.dart:187
+    if (u != null && p != null) {
+      final silentOk = await login(u, p);
+    }
+    ```
+  </Step>
+  
+  <Step title="Manual Re-login">
+    If silent login fails, the user is redirected to the login screen.
+  </Step>
+</Steps>
+
+<Warning>
+If you see error codes 1 or 2, the token is invalid and requires re-authentication.
+</Warning>
+
+### Invalid Credentials Error
+
+**Problem**: Login fails with "Invalid credentials" (error code 3).
+
+**Solutions**:
+- Verify username and password are correct
+- Check if account is active in the system
+- Ensure network connectivity to API server
+- Verify API base URL is correct (`ApiConfig.baseUrl`)
+
+### Version Mismatch Error
+
+**Problem**: Login shows "versión mínima" (minimum version required) error.
+
+**Cause**: App version is below the minimum required by the backend.
+
+**Solution**:
+```dart lib/features/logistics/providers/auth_provider.dart:107
+if (response.messageDetail?.contains('versión mínima') ?? false) {
+  // Update app to latest version
+}
+```
+
+Update the application to the latest version from your distribution channel.
+
+## Network Errors
+
+### Connection Timeout
+
+**Problem**: Requests fail with timeout errors (error code 408).
+
+**Solutions**:
+
+<AccordionGroup>
+  <Accordion title="Check Network Connectivity">
+    Ensure device has active internet connection and can reach the API server.
+  </Accordion>
+  
+  <Accordion title="Verify API URL">
+    Check that the correct environment is configured:
+    - Development: `http://100.104.120.121:81`
+    - Production: `https://internalapi.gbilogistics.net`
+  </Accordion>
+  
+  <Accordion title="Increase Timeout">
+    If the network is slow, you may need to increase the request timeout in your HTTP service configuration.
+  </Accordion>
+</AccordionGroup>
+
+### Service Unavailable (503)
+
+**Problem**: API returns error code 503.
+
+**Cause**: Backend server is down or under maintenance.
+
+**Solutions**:
+- Wait and retry (error is marked as retryable)
+- Check with system administrator
+- Verify server status
+
+```dart lib/core/models/api_error.dart:97
+bool get isRetryable {
+  return isServerError || code == ApiErrorCode.serviceUnavailable;
+}
+```
+
+## State Synchronization Issues
+
+### Guide State Validation Failed
+
+**Problem**: Cannot change guide state, receives "Invalid state for operation" error (error code 60).
+
+**Cause**: Guide is not in the required state for the requested operation.
+
+**Solution**:
+
+Validate guide state before performing operations:
+
+```dart lib/features/logistics/services/guide_validation_service.dart:13
+final response = await validateGuideStatusByProcess(request);
+if (!response.content.isValid) {
+  // Show user the required state
+  print('Current: ${response.content.currentState}');
+  print('Required: ${response.content.requiredState}');
+}
+```
+
+<Info>
+The API returns the current state and required state in the validation response. Show these to the user for clarity.
+</Info>
+
+### Cube State Invalid
+
+**Problem**: Cannot change cube state, receives "Invalid cube state" error (error code 203).
+
+**Valid state transitions**:
+- `Created` → `Sent`
+- `Sent` → `Downloading`
+- `Downloading` → `Downloaded`
+
+**Solution**: Check current cube state and only allow valid transitions:
+
+```dart lib/features/logistics/models/transport_cube_state.dart
+static const List<String> values = [
+  created,    // Created
+  sent,       // Sent
+  downloading, // Downloading
+  downloaded,  // Downloaded
+];
+```
+
+## Scanner Problems
+
+### Barcode Not Scanning
+
+**Problem**: Scanner doesn't detect or read barcodes.
+
+**Solutions**:
+
+<CardGroup cols={2}>
+  <Card title="Camera Permissions" icon="camera">
+    Ensure the app has camera permissions granted in device settings.
+  </Card>
+  
+  <Card title="Lighting Conditions" icon="lightbulb">
+    Improve lighting for better barcode visibility.
+  </Card>
+  
+  <Card title="Barcode Format" icon="barcode">
+    Verify the barcode format is supported by the scanner.
+  </Card>
+  
+  <Card title="Camera Focus" icon="crosshairs">
+    Ensure camera is properly focused on the barcode.
+  </Card>
+</CardGroup>
+
+### Invalid Guide Code
+
+**Problem**: Scanned guide code is not recognized.
+
+**Solutions**:
+- Verify guide exists in the system
+- Check for typos if entering manually
+- Ensure guide code format matches expected pattern
+- Validate guide is in the correct state for scanning
+
+## Validation Errors
+
+### Duplicate Entry (Error Code 102)
+
+**Problem**: Trying to add a guide that already exists in a cube.
+
+**Solution**:
+```dart
+if (error.code == ApiErrorCode.duplicateEntry) {
+  // Guide already exists, skip or show warning
+  MessageHelper.showWarning(context, 'Guide already in cube');
+}
+```
+
+### Guide Not Found (Error Code 200)
+
+**Problem**: Guide doesn't exist in the system.
+
+**Solutions**:
+- Verify the guide code is correct
+- Check if guide has been registered in the system
+- Contact administrator if guide should exist
+
+### Invalid Input (Error Code 100)
+
+**Problem**: Request data doesn't meet validation requirements.
+
+**Common causes**:
+- Empty required fields
+- Invalid data format
+- Out-of-range values
+
+**Solution**: Check the API error details for specific validation failures.
+
+## UI/UX Issues
+
+### Error Messages Not Showing
+
+**Problem**: Errors occur but no message is displayed to user.
+
+**Solution**: Ensure you're using the MessageHelper correctly:
+
+```dart lib/features/logistics/presentation/helpers/error_helper.dart
+// For API responses
+MessageHelper.showFromResponse(context, response);
+
+// For errors
+MessageHelper.showErrorSnackBar(context, error);
+
+// For success
+MessageHelper.showSuccessSnackBar(context, message);
+```
+
+### Blocking Error Dialogs
+
+**Problem**: User can't dismiss error dialog.
+
+**This is intentional** for critical errors that require user acknowledgment:
+
+```dart lib/features/logistics/presentation/helpers/error_helper.dart:285
+static Future<void> showBlockingErrorDialog(BuildContext context, String message) {
+  return showDialog(
+    barrierDismissible: false, // Can't dismiss by tapping outside
+    builder: (context) => PopScope(
+      canPop: false, // Can't dismiss with back button
+      ...
+    ),
+  );
+}
+```
+
+User must tap "Continuar" button to dismiss.
+
+## Debug Tips
+
+### Enable Logging
+
+<CodeGroup>
+```dart AppLogger
+AppLogger.log('Debug message', source: 'YourClass');
+AppLogger.error('Error occurred', error: e, source: 'YourClass');
+```
+
+```dart Developer Log
+import 'dart:developer' as developer;
+
+developer.log('Debug info', name: 'YourService');
+```
+</CodeGroup>
+
+### Inspect API Responses
+
+The app logs detailed API information:
+
+```dart lib/features/logistics/services/transport_cube_service.dart:20
+AppLogger.log(
+  'POST /api/v1.0/Guide/new-transport-cube\nRequest:\n${request.toJson()}',
+  source: 'TransportCubeService'
+);
+```
+
+Check console output for request/response details.
+
+### Check Auth State
+
+```dart
+final auth = Provider.of<AuthProvider>(context, listen: false);
+print('Is authenticated: ${auth.isAuthenticated}');
+print('Has token: ${auth.loginData?.token != null}');
+```
+
+### Monitor Token Refresh
+
+Watch for token refresh logs:
+
+```dart lib/core/observers/auth_lifecycle_observer.dart:29
+if (refreshed) {
+  AppLogger.log(
+    'Token refreshed successfully',
+    source: 'AuthLifecycleObserver',
+    type: 'SUCCESS'
+  );
+}
+```
+
+## Error Code Reference
+
+| Code | Type | Description | Retryable |
+|------|------|-------------|----------|
+| 1 | Auth | Session expired | No |
+| 2 | Auth | Invalid token | No |
+| 3 | Auth | Invalid credentials | No |
+| 60 | State | Invalid state for operation | No |
+| 100 | Validation | Invalid input | No |
+| 101 | Validation | Invalid state | No |
+| 102 | Validation | Duplicate entry | No |
+| 200 | Business | Guide not found | No |
+| 201 | Business | Invalid guide state | No |
+| 202 | Business | Cube not found | No |
+| 203 | Business | Invalid cube state | No |
+| 204 | Business | Invalid operation | No |
+| 400 | Network | Network error | Yes |
+| 408 | Network | Timeout | Yes |
+| 500 | Server | Server error | Yes |
+| 503 | Server | Service unavailable | Yes |
+
+<Info>
+See `lib/core/models/api_error.dart:4` for the complete error code definitions.
+</Info>
+
+## Getting Help
+
+If you can't resolve an issue:
+
+1. Check the error code in the table above
+2. Review relevant source code references
+3. Check application logs for detailed error information
+4. Contact the development team with:
+   - Error message and code
+   - Steps to reproduce
+   - Log output
+   - Device and app version information
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/resources/configuration">
+    API and environment configuration
+  </Card>
+  
+  <Card title="FAQ" icon="question" href="/resources/faq">
+    Frequently asked questions
+  </Card>
+</CardGroup>

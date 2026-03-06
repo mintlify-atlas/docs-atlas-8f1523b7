@@ -1,0 +1,189 @@
+---
+title: 'Configuration'
+description: 'Application configuration and environment setup'
+icon: 'gear'
+---
+
+## Overview
+
+GBI Logistics uses a centralized configuration system to manage API endpoints, authentication settings, and application behavior. All configuration is managed through the `ApiConfig` class.
+
+## API Configuration
+
+The application supports both development and production environments with automatic switching based on the `isDevelopment` flag.
+
+### Environment URLs
+
+<CodeGroup>
+```dart Development
+// Development API (Default)
+static const String devBaseUrl = 'http://100.104.120.121:81';
+static const bool isDevelopment = true;
+```
+
+```dart Production
+// Production API
+static const String prodBaseUrl = 'https://internalapi.gbilogistics.net';
+static const bool isDevelopment = false;
+```
+</CodeGroup>
+
+<Info>
+The active environment is determined by the `isDevelopment` constant in `lib/core/config/api_config.dart:16`.
+</Info>
+
+### API Version
+
+The application uses versioned API endpoints:
+
+```dart
+static const String version = '1.0';
+static String get apiPath => '/api/v$version';
+```
+
+All API calls are automatically prefixed with `/api/v1.0`.
+
+## Authentication Settings
+
+Authentication tokens are managed automatically with configurable refresh intervals.
+
+### Token Refresh Configuration
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `refreshTokenBeforeExpiry` | 30 minutes | Time before token expiry to trigger refresh |
+| `tokenCheckInterval` | 15 minutes | Interval for automatic token validation |
+
+```dart lib/core/config/api_config.dart
+static const refreshTokenBeforeExpiry = Duration(minutes: 30);
+static const tokenCheckInterval = Duration(minutes: 15);
+```
+
+<Warning>
+Tokens are automatically refreshed 30 minutes before expiration. If the refresh fails, the user will be logged out.
+</Warning>
+
+## API Endpoints
+
+All endpoints are centrally defined in the `ApiEndpoints` class:
+
+### Authentication Endpoints
+
+```dart
+ApiEndpoints.login           // POST /api/v1.0/Auth/login
+ApiEndpoints.refreshToken    // POST /api/v1.0/Auth/refresh-token
+```
+
+### Dashboard Endpoints
+
+```dart
+ApiEndpoints.dashboardData   // GET /api/v1.0/Dashboard/dashboard
+```
+
+### Guide Management Endpoints
+
+```dart
+ApiEndpoints.guidesPaginated              // GET /api/v1.0/Guide/guides-paginated
+ApiEndpoints.updateGuideStatus            // POST /api/v1.0/Guide/update-status
+ApiEndpoints.dispatchToClient             // POST /api/v1.0/Guide/dispatch-to-client
+ApiEndpoints.validateGuideStatusByProcess // POST /api/v1.0/Guide/validate-guide-status-by-process
+```
+
+### Transport Cube Endpoints
+
+```dart
+ApiEndpoints.newTransportCube           // POST /api/v1.0/Guide/new-transport-cube
+ApiEndpoints.getTransportCubes          // GET /api/v1.0/Guide/get-transport-cubes
+ApiEndpoints.getTransportCubeDetails    // GET /api/v1.0/Guide/get-transport-cube-details
+ApiEndpoints.changeTransportCubeState   // PUT /api/v1.0/Guide/change-transport-cube-state
+ApiEndpoints.changeCubeGuide            // PUT /api/v1.0/Guide/change-cube-guide
+ApiEndpoints.dispatchCubeToClient       // POST /api/v1.0/Guide/dispatch-cube-to-client
+ApiEndpoints.closeTransportCube         // POST /api/v1.0/TransportCube/close
+```
+
+### Client Endpoints
+
+```dart
+ApiEndpoints.clientToDispatchPaginated  // GET /api/v1.0/Client/to-dispatch-paginated
+```
+
+## Environment Variables
+
+The application uses Flutter's secure storage for sensitive data:
+
+### Stored Credentials
+
+- **Username**: Stored securely for silent login
+- **Password**: Encrypted and stored locally
+- **Auth Token**: JWT token for API authentication
+- **Token Expiry**: Expiration timestamp for token refresh
+
+<Note>
+Credentials are stored using the `SecureCredentialsService` which leverages platform-specific secure storage (Keychain on iOS, KeyStore on Android).
+</Note>
+
+## Switching Environments
+
+To switch between development and production:
+
+<Steps>
+  <Step title="Open Configuration File">
+    Navigate to `lib/core/config/api_config.dart`
+  </Step>
+  
+  <Step title="Update isDevelopment Flag">
+    Change the `isDevelopment` constant:
+    ```dart
+    static const bool isDevelopment = false; // for production
+    ```
+  </Step>
+  
+  <Step title="Rebuild Application">
+    Run `flutter clean && flutter pub get && flutter run`
+  </Step>
+</Steps>
+
+## Custom Configuration
+
+To add custom configuration options:
+
+```dart lib/core/config/api_config.dart
+class ApiConfig {
+  // Add your custom configuration
+  static const Duration requestTimeout = Duration(seconds: 30);
+  static const int maxRetries = 3;
+  static const bool enableLogging = true;
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Never Hardcode Secrets" icon="shield-halved">
+    Always use secure storage for sensitive data like API keys and tokens.
+  </Card>
+  
+  <Card title="Environment-Specific Config" icon="code-branch">
+    Keep development and production configurations separate and well-documented.
+  </Card>
+  
+  <Card title="Version Consistency" icon="code-compare">
+    Ensure API version matches the backend API version.
+  </Card>
+  
+  <Card title="Token Management" icon="key">
+    Let the auth system handle token refresh automatically.
+  </Card>
+</CardGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/features/authentication">
+    Learn about the authentication flow
+  </Card>
+  
+  <Card title="Troubleshooting" icon="wrench" href="/resources/troubleshooting">
+    Common configuration issues and solutions
+  </Card>
+</CardGroup>

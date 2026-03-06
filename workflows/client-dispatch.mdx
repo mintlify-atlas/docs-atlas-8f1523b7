@@ -1,0 +1,395 @@
+---
+title: "Client Dispatch"
+description: "Dispatch transport cubes to final destinations"
+icon: "box-open"
+---
+
+# Client Dispatch Workflow
+
+The client dispatch workflow is the final stage in the GBI Logistics system, where transport cubes are prepared for delivery to clients. Cubes in this stage have the **Downloaded** state (displayed as "Listo para Entrega" in the UI).
+
+## Overview
+
+Client dispatch represents completed reception at the warehouse. Cubes are now ready for final delivery to clients, either directly or through subcouriers and couriers. This stage focuses on organizing, dispatching, and closing completed deliveries.
+
+## Accessing Client Dispatch
+
+Navigate to the client dispatch screen:
+
+1. Open the side menu
+2. Select **Despacho a Cliente** (or similar dispatch option)
+3. The screen displays all cubes in the **Downloaded** state
+
+## Understanding Downloaded State
+
+Cubes in the **Downloaded** state have:
+
+- ✅ Been created at customs
+- ✅ Transited to warehouse
+- ✅ Been received and verified at warehouse
+- ✅ All guides accounted for
+- ✅ Ready for final dispatch
+
+```dart lib/features/logistics/models/transport_cube_state.dart
+/// Downloaded state definition
+static const String downloaded = 'Downloaded';
+
+static String getLabel(String state) {
+  switch (state) {
+    case downloaded:
+      return 'Listo para Entrega';
+    // ... other states
+  }
+}
+
+static int getColor(String state) {
+  switch (state) {
+    case downloaded:
+      return 0xFF4CAF50;  // Green - ready for dispatch
+    // ... other states
+  }
+}
+```
+
+## Dispatch Operations
+
+The client dispatch screen provides several key operations:
+
+### Viewing Dispatch-Ready Cubes
+
+The list shows all cubes ready for dispatch:
+
+- **Cube ID**: Unique identifier
+- **Guide count**: Number of guides in cube
+- **Cube type**: Destination type (client, subcourier, courier)
+- **Creation info**: When created and by whom
+- **State**: "Listo para Entrega" (Ready for Delivery)
+
+### Cube Types and Dispatch Routes
+
+<CardGroup cols={2}>
+  <Card title="Dispatch to Client" icon="user">
+    **CubeType.toDispatchToClient**
+    
+    Direct delivery to final clients. These cubes contain guides going directly to end customers.
+  </Card>
+  
+  <Card title="Dispatch to Subcourier" icon="truck">
+    **CubeType.toDispatchToSubcourier**
+    
+    Transfer to subcourier partners who handle last-mile delivery.
+  </Card>
+  
+  <Card title="Dispatch to Courier" icon="building">
+    **CubeType.toDispatchToCourier**
+    
+    Transfer to main courier services for regional distribution.
+  </Card>
+  
+  <Card title="Transit to Warehouse" icon="warehouse">
+    **CubeType.transitToWarehouse**
+    
+    These typically don't appear in client dispatch as they follow a different workflow.
+  </Card>
+</CardGroup>
+
+## Dispatching Cubes
+
+Process cubes for client dispatch:
+
+<Steps>
+  <Step title="Select Cubes">
+    From the dispatch list, select one or more cubes by tapping their checkboxes. Only select cubes going to the same destination type.
+  </Step>
+  
+  <Step title="Verify Contents">
+    Before dispatching, optionally review cube details:
+    - Tap cube to open details screen
+    - Verify guide list and count
+    - Check client information
+    - Ensure all guides are correct
+  </Step>
+  
+  <Step title="Initiate Dispatch">
+    Tap the **Despachar** button in the app bar. The button label may vary based on cube type:
+    - "Despachar a Cliente"
+    - "Despachar a Subcourier"
+    - "Despachar a Courier"
+  </Step>
+  
+  <Step title="Confirm Dispatch">
+    A confirmation dialog appears. Review the information and confirm the dispatch operation.
+  </Step>
+  
+  <Step title="Physical Handoff">
+    After system confirmation:
+    - Physically transfer cubes to driver/courier
+    - Obtain signature if required
+    - Provide dispatch documentation
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/services/transport_cube_service.dart
+/// Dispatch cubes to client/subcourier/courier
+Future<ApiResponse<GenericOperationResponseGenericResponse>> dispatchCubeToClient(
+  List<int> transportCubeIds,
+) async {
+  final response = await _httpService.post(
+    ApiEndpoints.dispatchCubeToClient,
+    body: {'TransportCubeIds': transportCubeIds},
+  );
+  return ApiResponse.fromJson(
+    response,
+    (json) => GenericOperationResponseGenericResponse.fromJson(json),
+  );
+}
+```
+
+## Closing Transport Cubes
+
+After successful dispatch and delivery confirmation, cubes can be closed:
+
+<Steps>
+  <Step title="Verify Completion">
+    Ensure:
+    - Cubes have been physically dispatched
+    - Delivery has been completed and confirmed
+    - All documentation is complete
+    - No pending issues or returns
+  </Step>
+  
+  <Step title="Select Cubes to Close">
+    From the dispatch list, select cubes that have been completed and are ready to close.
+  </Step>
+  
+  <Step title="Initiate Close">
+    Tap the **Cerrar Cubos** (Close Cubes) button if available. This option only appears for cubes that allow closing.
+    
+    <Note>
+    Not all cubes can be closed. The system checks the `allowClose` property.
+    </Note>
+  </Step>
+  
+  <Step title="Confirm Close">
+    Confirm the close operation. This action is final and marks the cubes as completed in the system.
+  </Step>
+</Steps>
+
+```dart lib/features/logistics/providers/transport_cube_provider.dart
+/// Close selected transport cubes
+Future<ApiResponse<GenericOperationResponseGenericResponse>> closeSelectedCubes() async {
+  if (_isLoading || _selectedCubes.isEmpty) {
+    return ApiResponse.error(messageDetail: 'No hay cubos seleccionados');
+  }
+
+  try {
+    _isLoading = true;
+    notifyListeners();
+
+    final response = await _service.closeTransportCubes(
+      _selectedCubes.toList(),
+    );
+
+    if (response.isSuccessful) {
+      _selectedCubes.clear();
+      await loadCubes(force: true);
+    }
+    
+    return response;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
+  }
+}
+```
+
+## Business Rules
+
+<AccordionGroup>
+  <Accordion title="Dispatch Authorization">
+    - Only cubes in **Downloaded** state can be dispatched
+    - User must have appropriate role permissions
+    - Cube type determines dispatch destination
+    - Cannot dispatch empty cubes (must contain guides)
+  </Accordion>
+  
+  <Accordion title="Cube Closing Rules">
+    - Only cubes with `allowClose: true` can be closed
+    - Closing is irreversible
+    - Closed cubes are archived
+    - Closed cubes cannot be reopened or modified
+    - All guides must be in proper final state
+  </Accordion>
+  
+  <Accordion title="Batch Operations">
+    - Can dispatch multiple cubes together if same type
+    - Cannot mix cube types in single dispatch
+    - Can close multiple cubes simultaneously
+    - Batch operations are atomic (all succeed or all fail)
+  </Accordion>
+  
+  <Accordion title="Guide Status">
+    - All guides should be in appropriate final status
+    - Guides with pending payments may block dispatch
+    - Invalid guide status prevents dispatch
+    - System validates guide eligibility before dispatch
+  </Accordion>
+</AccordionGroup>
+
+## Common Operations
+
+### Filtering by Cube Type
+
+Quickly find cubes by their destination:
+
+1. Use filters (if available) to show specific cube types
+2. Sort by creation date, guide count, or other criteria
+3. Search by cube ID or operator name
+
+### Reviewing Dispatch History
+
+To see previously dispatched or closed cubes:
+
+1. Some screens offer a "Show Historic" toggle
+2. Enable to view completed operations
+3. Review for audit or troubleshooting purposes
+
+### Managing Dispatch Lists
+
+<Tip>
+Organize dispatch operations by destination to improve efficiency:
+- Group subcourier dispatches together
+- Batch client deliveries by route or area
+- Coordinate with drivers for pickup schedules
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Cannot Dispatch Cube">
+    **Symptoms**: Dispatch button disabled or operation fails
+    
+    **Solutions**:
+    - Verify cube is in Downloaded state
+    - Check you have dispatch permissions
+    - Ensure cube type is correct for operation
+    - Verify all guides have valid status
+    - Check for guides with pending payments
+    - Review error messages for specific issues
+    - Try dispatching cubes individually instead of batch
+  </Accordion>
+  
+  <Accordion title="Close Button Not Available">
+    **Symptoms**: Cannot find option to close cubes
+    
+    **Solutions**:
+    - Check cube's `allowClose` property in details
+    - Verify cube has been fully dispatched
+    - Ensure appropriate time has passed since dispatch
+    - Confirm you have closing permissions
+    - Check organization's policies on cube closing
+  </Accordion>
+  
+  <Accordion title="Guides Missing from Cube">
+    **Symptoms**: Expected guides not showing in cube
+    
+    **Solutions**:
+    - Check cube details for complete guide list
+    - Look for guides marked as "Extracted"
+    - Review cube history for guide movements
+    - Verify guides weren't moved to another cube
+    - Check reception logs for discrepancies
+    - Contact warehouse reception team
+  </Accordion>
+  
+  <Accordion title="Dispatch Fails with Error">
+    **Symptoms**: Error message after confirming dispatch
+    
+    **Solutions**:
+    - Read error message for specific cause
+    - Common issues:
+      - Network connectivity problems
+      - Invalid guide status
+      - Pending payments on guides
+      - Cube already dispatched
+      - Permission denied
+    - Wait and retry if network error
+    - Resolve guide issues before retrying
+    - Contact supervisor if unable to resolve
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Pre-Dispatch Verification">
+    Always verify before dispatching:
+    - Review cube contents in detail
+    - Confirm client information is correct
+    - Check for any special handling requirements
+    - Verify all guides are accounted for
+    - Ensure dispatch documentation is ready
+  </Accordion>
+  
+  <Accordion title="Batch Dispatch Efficiency">
+    Improve efficiency with batch operations:
+    - Group cubes by destination type
+    - Coordinate with drivers for pickup times
+    - Prepare documentation in advance
+    - Verify all cubes in batch before confirming
+    - Keep physical workspace organized
+  </Accordion>
+  
+  <Accordion title="Documentation and Tracking">
+    Maintain proper records:
+    - Obtain signatures for dispatches when required
+    - Keep copies of dispatch documentation
+    - Note any special circumstances
+    - Follow up on delivery confirmations
+    - Close cubes promptly after completion
+  </Accordion>
+  
+  <Accordion title="Communication">
+    Coordinate effectively:
+    - Notify drivers of ready cubes
+    - Inform clients of expected deliveries
+    - Coordinate with subcouriers on schedules
+    - Report issues to supervisors promptly
+    - Maintain clear handoff procedures
+  </Accordion>
+</AccordionGroup>
+
+## Workflow Completion
+
+The client dispatch stage completes the GBI Logistics workflow:
+
+```mermaid
+graph LR
+    A[Customs Dispatch<br/>Created] --> B[Warehouse Transit<br/>Sent]
+    B --> C[Warehouse Reception<br/>Downloading]
+    C --> D[Client Dispatch<br/>Downloaded]
+    D --> E[Dispatched<br/>Closed]
+    
+    style A fill:#2196F3
+    style B fill:#FF9800
+    style C fill:#9C27B0
+    style D fill:#4CAF50
+    style E fill:#607D8B
+```
+
+## Related Documentation
+
+<CardGroup cols={2}>
+  <Card title="Transport Cubes" icon="cube" href="/features/transport-cubes">
+    Complete guide to transport cube system
+  </Card>
+  <Card title="State Workflow" icon="diagram-project" href="/features/state-workflow">
+    Understand the complete state workflow
+  </Card>
+  <Card title="Warehouse Reception" icon="warehouse" href="/workflows/warehouse-reception">
+    Previous stage in the workflow
+  </Card>
+  <Card title="Guide Management" icon="barcode" href="/features/guide-management">
+    Managing guides throughout the process
+  </Card>
+</CardGroup>
